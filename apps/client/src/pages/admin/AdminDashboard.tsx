@@ -1,57 +1,45 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { useAdminStats } from '@/hooks/useDashboardData';
+
+const StatCard: React.FC<{ title: string; value: number | string }> = ({ title, value }) => (
+  <Card>
+    <CardHeader>
+      <CardTitle>{title}</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <p className="text-4xl font-bold">{value}</p>
+    </CardContent>
+  </Card>
+);
 
 const AdminDashboard: React.FC = () => {
+  const { users, classes, pendingResources, events, isLoading } = useAdminStats();
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-      
+
+      {isLoading && <p>Loading stats...</p>}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Total Users</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold">120</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Active Classes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold">15</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Pending Resources</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold">3</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Events</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold">7</p>
-          </CardContent>
-        </Card>
+        <StatCard title="Total Users" value={users.length} />
+        <StatCard title="Active Classes" value={classes.length} />
+        <StatCard title="Pending Resources" value={pendingResources.length} />
+        <StatCard title="Upcoming Events" value={events.length} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Recent Activity Feed</CardTitle>
+            <CardTitle>Upcoming Events</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Placeholder for activity feed */}
             <ul className="space-y-2">
-              <li>New user registered: John Doe</li>
-              <li>Resource uploaded: "Lesson Plan - Genesis"</li>
-              <li>Class updated: "Ages 6-8" capacity changed</li>
+              {events.slice(0, 5).map((event) => (
+                <li key={event._id}>{event.title}</li>
+              ))}
+              {events.length === 0 && <li className="text-sm text-gray-500">No upcoming events</li>}
             </ul>
           </CardContent>
         </Card>
