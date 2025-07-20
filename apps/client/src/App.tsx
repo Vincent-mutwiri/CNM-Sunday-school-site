@@ -7,6 +7,12 @@ import Layout from '@/components/layout/Layout';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import Dashboard from '@/pages/Dashboard';
+import UserManagement from '@/pages/admin/UserManagement';
+import ClassManagement from '@/pages/admin/ClassManagement';
+import Scheduling from '@/pages/admin/Scheduling';
+import ResourceModeration from '@/pages/admin/ResourceModeration';
+import GalleryModeration from '@/pages/admin/GalleryModeration';
+import AdminSettings from '@/pages/admin/AdminSettings';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,12 +57,12 @@ const AppRoutes: React.FC = () => {
         >
           <Route path="dashboard" element={<Dashboard />} />
           {/* Admin routes */}
-          <Route path="admin/users" element={<div>User Management (Coming Soon)</div>} />
-          <Route path="admin/classes" element={<div>Class Management (Coming Soon)</div>} />
-          <Route path="admin/schedules" element={<div>Scheduling (Coming Soon)</div>} />
-          <Route path="admin/resources" element={<div>Resource Moderation (Coming Soon)</div>} />
-          <Route path="admin/gallery" element={<div>Gallery Moderation (Coming Soon)</div>} />
-          <Route path="admin/settings" element={<div>Settings (Coming Soon)</div>} />
+          <Route path="admin/users" element={<UserManagement />} />
+          <Route path="admin/classes" element={<ClassManagement />} />
+          <Route path="admin/schedules" element={<Scheduling />} />
+          <Route path="admin/resources" element={<ResourceModeration />} />
+          <Route path="admin/gallery" element={<GalleryModeration />} />
+          <Route path="admin/settings" element={<AdminSettings />} />
           
           {/* Teacher routes */}
           <Route path="teacher/classes" element={<div>My Classes (Coming Soon)</div>} />
