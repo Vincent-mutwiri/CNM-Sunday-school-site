@@ -20,7 +20,7 @@ const Children: React.FC = () => {
             </CardHeader>
             <CardContent>
               <p className="text-sm">Age: {calculateAge(child.dateOfBirth)} years</p>
-              <p className="text-sm">Class: {child.assignedClass || 'N/A'}</p>
+              <p className="text-sm">Class: {typeof child.assignedClass === 'string' ? child.assignedClass : child.assignedClass?.name || 'N/A'}</p>
             </CardContent>
           </Card>
         ))}

@@ -26,7 +26,7 @@ const ParentDashboard: React.FC = () => {
             <CardContent>
               <div className="space-y-2">
                 <p><span className="font-medium">Age:</span> {calculateAge(child.dateOfBirth)} years old</p>
-                <p><span className="font-medium">Class:</span> {child.assignedClass}</p>
+                <p><span className="font-medium">Class:</span> {typeof child.assignedClass === 'string' ? child.assignedClass : child.assignedClass?.name || 'N/A'}</p>
                 <p><span className="font-medium">Last Attendance:</span> N/A</p>
               </div>
               <Button className="w-full mt-4" variant="outline">

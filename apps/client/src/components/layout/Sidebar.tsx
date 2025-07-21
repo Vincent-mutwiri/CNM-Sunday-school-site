@@ -96,10 +96,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.href;
+              // Create a unique key by combining name and href
+              const uniqueKey = `${item.name}-${item.href}`;
 
               return (
                 <Link
-                  key={item.name}
+                  key={uniqueKey}
                   to={item.href}
                   onClick={onClose}
                   className={cn(
