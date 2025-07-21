@@ -8,18 +8,33 @@ import { Button } from '@/components/ui/button';
 const ResourceModeration: React.FC = () => {
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery(['pending-resources'], async () =>
-    apiClient.get<{ resources: Resource[] }>('/resources/pending')
-  );
+  type ApiResponse = {
+    data: {
+      resources: Resource[];
+    };
+  };
 
-  const updateStatusMutation = useMutation(
-    async ({ id, status }: { id: string; status: 'Approved' | 'Rejected' }) =>
-      apiClient.put(`/resources/${id}/status`, { status }),
-    {
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: ['pending-resources'] }),
+  const { data, isLoading } = useQuery<ApiResponse['data']>({
+    queryKey: ['pending-resources'],
+    queryFn: async (): Promise<ApiResponse['data']> => {
+      try {
+        const response = await apiClient.get<ApiResponse>('/resources/pending');
+        return response?.data || { resources: [] };
+      } catch (error) {
+        console.error('Error fetching pending resources:', error);
+        return { resources: [] };
+      }
     }
-  );
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: 'Approved' | 'Rejected' }) => {
+      await apiClient.put(`/resources/${id}/status`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pending-resources'] });
+    }
+  });
 
   if (isLoading) {
     return <div>Loading resources...</div>;

@@ -5,9 +5,24 @@ import { Schedule } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Scheduling: React.FC = () => {
-  const { data, isLoading } = useQuery(['schedules'], async () =>
-    apiClient.get<{ schedules: Schedule[] }>('/schedules')
-  );
+  type ApiResponse = {
+    data: {
+      schedules: Schedule[];
+    };
+  };
+
+  const { data, isLoading } = useQuery<ApiResponse['data']>({
+    queryKey: ['schedules'],
+    queryFn: async (): Promise<ApiResponse['data']> => {
+      try {
+        const response = await apiClient.get<ApiResponse>('/schedules');
+        return response?.data || { schedules: [] };
+      } catch (error) {
+        console.error('Error fetching schedules:', error);
+        return { schedules: [] };
+      }
+    }
+  });
 
   if (isLoading) {
     return <div>Loading schedules...</div>;

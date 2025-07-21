@@ -8,30 +8,48 @@ import { Button } from '@/components/ui/button';
 const UserManagement: React.FC = () => {
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery(['users'], async () =>
-    apiClient.get<{ users: User[] }>('/users')
-  );
+  type ApiResponse = {
+    data: {
+      users: User[];
+    };
+  };
 
-  const updateRoleMutation = useMutation(
-    async ({ id, role }: { id: string; role: User['role'] }) =>
-      apiClient.put(`/users/${id}/role`, { role }),
-    {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  const { data, isLoading } = useQuery<ApiResponse['data']>({
+    queryKey: ['users'],
+    queryFn: async (): Promise<ApiResponse['data']> => {
+      try {
+        const response = await apiClient.get<ApiResponse>('/users');
+        return response?.data || { users: [] };
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        return { users: [] };
+      }
     }
-  );
+  });
 
-  const deleteUserMutation = useMutation(
-    async (id: string) => apiClient.delete(`/users/${id}`),
-    {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  const users = data?.users ?? [];
+
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ id, role }: { id: string; role: User['role'] }) => {
+      await apiClient.put(`/users/${id}/role`, { role });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
     }
-  );
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: (id: string) => {
+      return apiClient.delete(`/users/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    }
+  });
 
   if (isLoading) {
     return <div>Loading users...</div>;
   }
-
-  const users = data?.users ?? [];
 
   return (
     <div className="space-y-6">
@@ -57,7 +75,7 @@ const UserManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {users.map((user) => (
+              {users.map((user: User) => (
                 <tr key={user.id}>
                   <td className="px-4 py-2">{user.name}</td>
                   <td className="px-4 py-2">{user.email}</td>

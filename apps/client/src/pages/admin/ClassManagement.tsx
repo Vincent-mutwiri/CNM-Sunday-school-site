@@ -8,16 +8,31 @@ import { Button } from '@/components/ui/button';
 const ClassManagement: React.FC = () => {
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery(['classes'], async () =>
-    apiClient.get<{ classes: Class[] }>('/classes')
-  );
+  type ApiResponse = {
+    data: {
+      classes: Class[];
+    };
+  };
 
-  const deleteClassMutation = useMutation(
-    async (id: string) => apiClient.delete(`/classes/${id}`),
-    {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: ['classes'] }),
+  const { data, isLoading } = useQuery<ApiResponse['data']>({
+    queryKey: ['classes'],
+    queryFn: async (): Promise<ApiResponse['data']> => {
+      try {
+        const response = await apiClient.get<ApiResponse>('/classes');
+        return response?.data || { classes: [] };
+      } catch (error) {
+        console.error('Error fetching classes:', error);
+        return { classes: [] };
+      }
     }
-  );
+  });
+  
+  const deleteClassMutation = useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/classes/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
+    }
+  });
 
   if (isLoading) {
     return <div>Loading classes...</div>;
@@ -49,7 +64,7 @@ const ClassManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {classes.map((cls) => (
+              {classes.map((cls: Class) => (
                 <tr key={cls._id}>
                   <td className="px-4 py-2">{cls.name}</td>
                   <td className="px-4 py-2">{cls.ageRange}</td>

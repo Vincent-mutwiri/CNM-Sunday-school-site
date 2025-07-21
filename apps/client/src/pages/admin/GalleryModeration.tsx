@@ -8,17 +8,33 @@ import { Button } from '@/components/ui/button';
 const GalleryModeration: React.FC = () => {
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery(['pending-images'], async () =>
-    apiClient.get<{ images: GalleryImage[] }>('/gallery/pending')
-  );
+  type ApiResponse = {
+    data: {
+      images: GalleryImage[];
+    };
+  };
 
-  const updateStatusMutation = useMutation(
-    async ({ id, status }: { id: string; status: 'Approved' | 'Rejected' }) =>
-      apiClient.put(`/gallery/${id}/status`, { status }),
-    {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pending-images'] }),
+  const { data, isLoading } = useQuery<ApiResponse['data']>({
+    queryKey: ['pending-images'],
+    queryFn: async (): Promise<ApiResponse['data']> => {
+      try {
+        const response = await apiClient.get<ApiResponse>('/gallery/pending');
+        return response?.data || { images: [] };
+      } catch (error) {
+        console.error('Error fetching pending images:', error);
+        return { images: [] };
+      }
     }
-  );
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: 'Approved' | 'Rejected' }) => {
+      await apiClient.put(`/gallery/${id}/status`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pending-images'] });
+    }
+  });
 
   if (isLoading) {
     return <div>Loading images...</div>;
