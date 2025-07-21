@@ -13,6 +13,14 @@ import Scheduling from '@/pages/admin/Scheduling';
 import ResourceModeration from '@/pages/admin/ResourceModeration';
 import GalleryModeration from '@/pages/admin/GalleryModeration';
 import AdminSettings from '@/pages/admin/AdminSettings';
+import Gallery from '@/pages/Gallery';
+import ResourceLibrary from '@/pages/ResourceLibrary';
+import TeacherResources from '@/pages/teacher/TeacherResources';
+import GalleryUpload from '@/pages/teacher/GalleryUpload';
+import TeacherClasses from '@/pages/teacher/TeacherClasses';
+import Children from '@/pages/parent/Children';
+import ParentResources from '@/pages/parent/ParentResources';
+import ParentGallery from '@/pages/parent/ParentGallery';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -63,18 +71,22 @@ const AppRoutes: React.FC = () => {
           <Route path="admin/resources" element={<ResourceModeration />} />
           <Route path="admin/gallery" element={<GalleryModeration />} />
           <Route path="admin/settings" element={<AdminSettings />} />
-          
+
           {/* Teacher routes */}
-          <Route path="teacher/classes" element={<div>My Classes (Coming Soon)</div>} />
+          <Route path="teacher/classes" element={<TeacherClasses />} />
           <Route path="teacher/attendance" element={<div>Attendance (Coming Soon)</div>} />
-          <Route path="teacher/resources" element={<div>Resources (Coming Soon)</div>} />
-          <Route path="teacher/gallery" element={<div>Gallery Upload (Coming Soon)</div>} />
-          
+          <Route path="teacher/resources" element={<TeacherResources />} />
+          <Route path="teacher/gallery" element={<GalleryUpload />} />
+
           {/* Parent routes */}
-          <Route path="parent/children" element={<div>My Children (Coming Soon)</div>} />
+          <Route path="parent/children" element={<Children />} />
           <Route path="parent/attendance" element={<div>Attendance (Coming Soon)</div>} />
-          <Route path="parent/resources" element={<div>Resources (Coming Soon)</div>} />
-          <Route path="parent/gallery" element={<div>Gallery (Coming Soon)</div>} />
+          <Route path="parent/resources" element={<ParentResources />} />
+          <Route path="parent/gallery" element={<ParentGallery />} />
+
+          {/* Shared pages */}
+          <Route path="resources" element={<ResourceLibrary />} />
+          <Route path="gallery" element={<Gallery />} />
           
           <Route path="" element={<Navigate to="/dashboard" replace />} />
         </Route>
