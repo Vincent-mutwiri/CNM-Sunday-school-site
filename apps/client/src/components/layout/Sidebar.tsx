@@ -27,6 +27,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const getNavigationItems = () => {
     const baseItems = [
       { name: 'Dashboard', href: '/dashboard', icon: Home },
+      { name: 'Resources', href: '/resources', icon: FileText },
+      { name: 'Gallery', href: '/gallery', icon: Camera },
     ];
 
     if (user?.role === 'Admin') {
