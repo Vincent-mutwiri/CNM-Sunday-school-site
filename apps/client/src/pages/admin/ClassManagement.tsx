@@ -290,10 +290,11 @@ type ClassTableProps = {
   teachers: User[];
   onEdit: (cls: Class) => void;
   onDelete: (id: string) => void;
+  onArchive: (id: string) => void;
   isLoading: boolean;
 };
 
-const ClassTable: React.FC<ClassTableProps> = ({ classes, teachers, onEdit, onDelete, isLoading }) => {
+const ClassTable: React.FC<ClassTableProps> = ({ classes, teachers, onEdit, onDelete, onArchive, isLoading }) => {
   const getTeacherName = (teacher: string | Teacher | User | null | undefined) => {
     if (!teacher) return <span className="text-gray-500">Unassigned</span>;
     if (typeof teacher === 'object' && 'name' in teacher) return teacher.name;
@@ -341,6 +342,9 @@ const ClassTable: React.FC<ClassTableProps> = ({ classes, teachers, onEdit, onDe
                 <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
                   <Button variant="outline" size="sm" onClick={() => onEdit(cls)}>
                     <Pencil className="h-4 w-4 mr-1" /> Edit
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => onArchive(cls._id)}>
+                    Archive
                   </Button>
                   <Button variant="destructive" size="sm" onClick={() => onDelete(cls._id)}>
                     Delete
@@ -407,6 +411,15 @@ const ClassManagement: React.FC = () => {
     },
   });
 
+  const { mutate: archiveClass, isPending: isArchiving } = useMutation({
+    mutationFn: (id: string) => apiClient.put(`/classes/${id}/archive`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
+      toast.success('Class archived');
+    },
+    onError: (error: Error) => toast.error(error.message || 'Failed to archive class.')
+  });
+
   const handleOpenCreate = () => setDialogState({ open: true, classData: null });
   const handleOpenEdit = (cls: Class) => setDialogState({ open: true, classData: cls });
   const handleDeleteRequest = (id: string) => setDeleteDialogState({ open: true, classId: id });
@@ -415,6 +428,7 @@ const ClassManagement: React.FC = () => {
       deleteClass(deleteDialogState.classId);
     }
   };
+  const handleArchive = (id: string) => archiveClass(id);
 
   if (isError) {
     return <div className="p-4 text-red-500 bg-red-50 rounded-md">Error loading classes: {error.message}</div>;
@@ -453,6 +467,7 @@ const ClassManagement: React.FC = () => {
             teachers={teachers}
             onEdit={handleOpenEdit}
             onDelete={handleDeleteRequest}
+            onArchive={handleArchive}
             isLoading={isLoading}
           />
         </CardContent>

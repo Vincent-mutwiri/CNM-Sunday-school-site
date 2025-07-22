@@ -3,8 +3,9 @@ import {
   createClass, 
   getAllClasses, 
   getClassById, 
-  updateClass, 
-  deleteClass, 
+  updateClass,
+  archiveClass,
+  deleteClass,
   assignStudentToClass,
   getTeacherClasses
 } from '../controllers/classController';
@@ -16,6 +17,7 @@ const router: import("express").Router = Router();
 // Admin only routes
 router.post('/', authMiddleware, checkRole(['Admin']), createClass);
 router.put('/:id', authMiddleware, checkRole(['Admin']), updateClass);
+router.put('/:id/archive', authMiddleware, checkRole(['Admin']), archiveClass);
 router.delete('/:id', authMiddleware, checkRole(['Admin']), deleteClass);
 router.post('/:id/assign-student', authMiddleware, checkRole(['Admin']), assignStudentToClass);
 

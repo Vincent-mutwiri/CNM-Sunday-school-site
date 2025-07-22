@@ -23,6 +23,7 @@ import TeacherResources from '@/pages/teacher/TeacherResources';
 import GalleryUpload from '@/pages/teacher/GalleryUpload';
 import TeacherClasses from '@/pages/teacher/TeacherClasses';
 import AttendanceMarking from '@/pages/teacher/AttendanceMarking';
+import TeacherAvailability from '@/pages/teacher/TeacherAvailability';
 import { CreateEventPage } from '@/pages/teacher/CreateEventPage';
 import { EventsList } from '@/pages/teacher/EventsList';
 import Children from '@/pages/parent/Children';
@@ -87,6 +88,7 @@ const AppRoutes: React.FC = () => {
           <Route path="teacher/events" element={<EventsList />} />
           <Route path="teacher/events/new" element={<CreateEventPage />} />
           <Route path="teacher/resources" element={<TeacherResources />} />
+          <Route path="teacher/availability" element={<TeacherAvailability />} />
           <Route path="teacher/gallery" element={<GalleryUpload />} />
 
           {/* Parent routes */}

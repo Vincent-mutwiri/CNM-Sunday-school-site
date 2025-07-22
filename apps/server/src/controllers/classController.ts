@@ -73,6 +73,23 @@ export const updateClass = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const archiveClass = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const cls = await Class.findByIdAndUpdate(id, { archived: true }, { new: true });
+
+    if (!cls) {
+      return res.status(404).json({ message: 'Class not found' });
+    }
+
+    res.json({ message: 'Class archived', class: cls });
+  } catch (error) {
+    console.error('Archive class error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const deleteClass = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

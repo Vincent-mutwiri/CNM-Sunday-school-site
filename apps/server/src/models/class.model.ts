@@ -7,6 +7,7 @@ export interface IClass extends Document {
   description?: string;
   teacher: Schema.Types.ObjectId;
   students: Schema.Types.ObjectId[];
+  archived: boolean;
 }
 
 const classSchema = new Schema<IClass>({
@@ -14,15 +15,16 @@ const classSchema = new Schema<IClass>({
   ageRange: { type: String, required: true },
   capacity: { type: Number, required: true },
   description: { type: String },
-  teacher: { 
-    type: Schema.Types.ObjectId, 
+  teacher: {
+    type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true 
+    required: true
   },
   students: [{
     type: Schema.Types.ObjectId,
     ref: 'Child'
-  }]
+  }],
+  archived: { type: Boolean, default: false }
 }, { timestamps: true });
 
 const Class = model<IClass>('Class', classSchema);

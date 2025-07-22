@@ -5,7 +5,7 @@ import { AuthRequest } from '../middleware/authMiddleware';
 
 export const createSchedule = async (req: AuthRequest, res: Response) => {
   try {
-    const { classId, teacherId, date } = req.body;
+    const { classId, teacherId, date, room } = req.body;
 
     // Get all students assigned to this class
     const students = await Child.find({ assignedClass: classId });
@@ -15,7 +15,8 @@ export const createSchedule = async (req: AuthRequest, res: Response) => {
       class: classId,
       teacher: teacherId,
       students: studentIds,
-      date: new Date(date)
+      date: new Date(date),
+      room
     });
 
     await schedule.save();
