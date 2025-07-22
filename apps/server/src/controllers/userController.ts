@@ -17,24 +17,73 @@ export const updateUserRole = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { role } = req.body;
 
+    console.log('Update role request:', { id, role, body: req.body });
+
+    if (!role) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Role is required',
+        received: req.body
+      });
+    }
+
     if (!['Admin', 'Teacher', 'Parent'].includes(role)) {
-      return res.status(400).json({ message: 'Invalid role' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid role. Role must be one of: Admin, Teacher, Parent',
+        received: role
+      });
     }
 
     const user = await User.findByIdAndUpdate(
       id,
       { role },
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found',
+        userId: id
+      });
     }
 
-    res.json({ message: 'User role updated successfully', user });
-  } catch (error) {
+    // Remove sensitive data before sending response
+    const userObj = user.toObject();
+    delete userObj.password;
+
+    res.json({ 
+      success: true,
+      message: 'User role updated successfully',
+      user: userObj 
+    });
+  } catch (error: any) {
     console.error('Update user role error:', error);
-    res.status(500).json({ message: 'Server error' });
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        error: error.message
+      });
+    }
+
+    // Handle cast errors (invalid ID format)
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID format',
+        error: error.message
+      });
+    }
+
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to update user role',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 

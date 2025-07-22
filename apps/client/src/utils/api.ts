@@ -29,13 +29,40 @@ class ApiClient {
       const response = await fetch(url, config);
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+          console.error('API Error Response:', {
+            status: response.status,
+            statusText: response.statusText,
+            url,
+            error: errorData
+          });
+        } catch (jsonError) {
+          console.error('API Error (non-JSON response):', {
+            status: response.status,
+            statusText: response.statusText,
+            url
+          });
+        }
+        const error = new Error(errorMessage);
+        (error as any).status = response.status;
+        throw error;
       }
 
-      return await response.json();
+      try {
+        return await response.json();
+      } catch (jsonError) {
+        console.error('Failed to parse JSON response:', jsonError);
+        throw new Error('Invalid JSON response from server');
+      }
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('API request failed:', {
+        error,
+        url,
+        method: config.method || 'GET'
+      });
       throw error;
     }
   }

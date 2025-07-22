@@ -40,25 +40,70 @@ const UserManagement: React.FC = () => {
     }
   });
 
-  // Extract users from the response data
-  const users = data?.users || [];
+  // Extract users from the response data and sort them by role for better organization
+  const users = (data?.users || []).sort((a, b) => {
+    const roleOrder: Record<User['role'], number> = {
+      'Admin': 0,
+      'Teacher': 1,
+      'Parent': 2
+    };
+    return roleOrder[a.role] - roleOrder[b.role];
+  });
   console.log('Users in component:', users);
+
+  const [updatingUser, setUpdatingUser] = useState<string | null>(null);
 
   const updateRoleMutation = useMutation({
     mutationFn: async ({ id, role }: { id: string; role: User['role'] }) => {
-      await apiClient.put(`/users/${id}/role`, { role });
+      if (!id) {
+        throw new Error('User ID is required');
+      }
+      console.log(`Updating user ${id} role to ${role}`);
+      try {
+        const response = await apiClient.put(`/users/${id}/role`, { role });
+        console.log('Update role response:', response);
+        return response;
+      } catch (error) {
+        console.error('API Error:', error);
+        throw error;
+      }
+    },
+    onMutate: (variables) => {
+      setUpdatingUser(variables.id);
     },
     onSuccess: () => {
+      toast.success('User role updated successfully');
+      // Invalidate both the admin/users and users queries to ensure UI consistency
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to update user role:', error);
+      toast.error(`Failed to update user role: ${error.message}`);
+    },
+    onSettled: () => {
+      setUpdatingUser(null);
     }
   });
 
   const deleteUserMutation = useMutation({
-    mutationFn: (id: string) => {
-      return apiClient.delete(`/users/${id}`);
+    mutationFn: async (id: string) => {
+      console.log(`Deleting user ${id}`);
+      const response = await apiClient.delete(`/users/${id}`);
+      console.log('Delete user response:', response);
+      return response;
     },
     onSuccess: () => {
+      toast.success('User deleted successfully');
+      setUserToDelete(null);
+      // Invalidate both the admin/users and users queries
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to delete user:', error);
+      toast.error(`Failed to delete user: ${error.message}`);
+      setUserToDelete(null);
     }
   });
 
@@ -73,31 +118,22 @@ const UserManagement: React.FC = () => {
     );
   }
 
-  const handleRoleChange = (userId: string, newRole: User['role']) => {
-    updateRoleMutation.mutate(
-      { id: userId, role: newRole },
-      {
-        onSuccess: () => {
-          toast.success('User role updated successfully');
-        },
-        onError: () => {
-          toast.error('Failed to update user role');
-        }
-      }
-    );
+  const handleRoleChange = (user: User, newRole: User['role']) => {
+    // Use either user.id or user._id, whichever is available
+    const userId = 'id' in user ? user.id : (user as any)._id;
+    
+    if (!userId) {
+      console.error('Cannot update role: User ID is undefined', { user });
+      toast.error('Cannot update role: Invalid user');
+      return;
+    }
+    
+    console.log('Updating user role:', { userId, newRole });
+    updateRoleMutation.mutate({ id: userId, role: newRole });
   };
 
   const handleDeleteUser = (userId: string) => {
-    deleteUserMutation.mutate(userId, {
-      onSuccess: () => {
-        toast.success('User deleted successfully');
-        setUserToDelete(null);
-      },
-      onError: () => {
-        toast.error('Failed to delete user');
-        setUserToDelete(null);
-      }
-    });
+    deleteUserMutation.mutate(userId);
   };
 
   // Role colors mapping (commented out for now, can be used for styling)
@@ -152,26 +188,34 @@ const UserManagement: React.FC = () => {
                   <div className="flex items-center space-x-4">
                     <Select
                       value={user.role}
-                      onValueChange={(value: User['role']) => handleRoleChange(user.id, value)}
+                      onValueChange={(value: User['role']) => handleRoleChange(user, value)}
+                      disabled={!!updatingUser}
                     >
                       <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select role" />
+                        {updatingUser === user.id ? (
+                          <span className="flex items-center">
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Updating...
+                          </span>
+                        ) : (
+                          <SelectValue placeholder="Select role" />
+                        )}
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Admin">Admin</SelectItem>
-                        <SelectItem value="Teacher">Teacher</SelectItem>
-                        <SelectItem value="Parent">Parent</SelectItem>
+                        <SelectItem key="admin-role" value="Admin">Admin</SelectItem>
+                        <SelectItem key="teacher-role" value="Teacher">Teacher</SelectItem>
+                        <SelectItem key="parent-role" value="Parent">Parent</SelectItem>
                       </SelectContent>
                     </Select>
                     
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                      className="text-red-500 hover:bg-red-50"
                       onClick={() => setUserToDelete(user.id)}
-                      disabled={deleteUserMutation.isPending}
+                      disabled={deleteUserMutation.isPending && deleteUserMutation.variables === user.id}
                     >
-                      {deleteUserMutation.isPending && userToDelete === user.id ? (
+                      {deleteUserMutation.isPending && deleteUserMutation.variables === user.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Trash2 className="h-4 w-4" />
