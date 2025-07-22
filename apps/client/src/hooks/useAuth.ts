@@ -18,13 +18,20 @@ export const useAuth = () => {
   const { user, token, isAuthenticated, login, logout } = useAuthStore();
   const queryClient = useQueryClient();
 
-  const loginMutation = useMutation({
+  const loginMutation = useMutation<AuthResponse, Error, LoginCredentials>({
     mutationFn: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-      return apiClient.post('/auth/login', credentials);
+      const response = await apiClient.post<AuthResponse>('/auth/login', credentials) as AuthResponse;
+      console.log('Login response:', { user: response.user, hasToken: !!response.token });
+      return response;
     },
     onSuccess: (data) => {
+      if (!data.token) {
+        console.error('No token received in login response');
+        throw new Error('Authentication failed: No token received');
+      }
       login(data.user, data.token);
       queryClient.invalidateQueries({ queryKey: ['user'] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
     },
   });
 

@@ -16,6 +16,13 @@ class ApiClient {
     const url = `${this.baseURL}${endpoint}`;
     const token = useAuthStore.getState().token;
 
+    console.log('API Request:', {
+      url,
+      method: options.method || 'GET',
+      hasToken: !!token,
+      endpoint
+    });
+
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
@@ -37,13 +44,17 @@ class ApiClient {
             status: response.status,
             statusText: response.statusText,
             url,
-            error: errorData
+            error: errorData,
+            headers: Object.fromEntries(response.headers.entries())
           });
         } catch (jsonError) {
+          const text = await response.text();
           console.error('API Error (non-JSON response):', {
             status: response.status,
             statusText: response.statusText,
-            url
+            url,
+            responseText: text,
+            headers: Object.fromEntries(response.headers.entries())
           });
         }
         const error = new Error(errorMessage);
@@ -52,16 +63,29 @@ class ApiClient {
       }
 
       try {
-        return await response.json();
+        const data = await response.json();
+        console.log('API Response:', {
+          url,
+          status: response.status,
+          data: endpoint === '/auth/login' ? { ...data, token: '***' } : data
+        });
+        return data;
       } catch (jsonError) {
-        console.error('Failed to parse JSON response:', jsonError);
+        console.error('Failed to parse JSON response:', {
+          error: jsonError,
+          url,
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries())
+        });
         throw new Error('Invalid JSON response from server');
       }
     } catch (error) {
       console.error('API request failed:', {
         error,
         url,
-        method: config.method || 'GET'
+        method: config.method || 'GET',
+        hasToken: !!token
       });
       throw error;
     }
