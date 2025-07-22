@@ -367,7 +367,7 @@ const ClassManagement: React.FC = () => {
   const [deleteDialogState, setDeleteDialogState] = useState<{ open: boolean; classId?: string }>({ open: false });
   const [selectedTeacher, setSelectedTeacher] = useState<string>('all');
 
-  const { data: classes, isLoading, isError, error } = useQuery({
+  const { data: classes = [], isLoading, isError, error } = useQuery<Class[]>({
     queryKey: ['classes'],
     queryFn: async (): Promise<Class[]> => {
       const response = await apiClient.get<{ classes: Class[] }>('/classes');
@@ -386,10 +386,10 @@ const ClassManagement: React.FC = () => {
   });
 
   const filteredClasses = useMemo(() => {
-    if (!classes) return [];
+    if (!Array.isArray(classes)) return [];
     if (selectedTeacher === 'all') return classes;
     return classes.filter(cls => {
-      if (!cls.teacher) return false;
+      if (!cls?.teacher) return false;
       const teacherId = typeof cls.teacher === 'string' ? cls.teacher : cls.teacher._id;
       return teacherId === selectedTeacher;
     });
