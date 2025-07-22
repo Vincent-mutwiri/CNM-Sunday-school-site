@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/utils/api';
-import { Class } from '@/types';
+import { Class, User, Child } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 const ClassManagement: React.FC = () => {
   const queryClient = useQueryClient();
@@ -26,11 +27,43 @@ const ClassManagement: React.FC = () => {
       }
     }
   });
-  
+
+  type UsersResponse = {
+    users: User[];
+  };
+
+  const { data: usersData } = useQuery<UsersResponse>({
+    queryKey: ['admin', 'users'],
+    queryFn: async () => apiClient.get<UsersResponse>('/users'),
+  });
+
+  const parents = (usersData?.users || []).filter(u => u.role === 'Parent');
+  const childrenOptions = parents.flatMap(parent =>
+    (parent.children as Child[] | undefined)?.map(child => ({
+      id: child._id,
+      label: `${parent.name} - ${child.firstName} ${child.lastName}`,
+    })) || []
+  );
+
+  const [selectedChild, setSelectedChild] = useState<Record<string, string>>({});
+
   const deleteClassMutation = useMutation({
     mutationFn: (id: string) => apiClient.delete(`/classes/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
+    }
+  });
+
+  const assignChildMutation = useMutation({
+    mutationFn: ({ classId, childId }: { classId: string; childId: string }) =>
+      apiClient.post(`/classes/${classId}/assign-student`, { childId }),
+    onSuccess: () => {
+      toast.success('Child assigned to class');
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
+      setSelectedChild(prev => ({ ...prev }));
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to assign child');
     }
   });
 
@@ -60,6 +93,9 @@ const ClassManagement: React.FC = () => {
                 <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">
                   Capacity
                 </th>
+                <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">
+                  Assign Child
+                </th>
                 <th className="px-4 py-2" />
               </tr>
             </thead>
@@ -69,6 +105,34 @@ const ClassManagement: React.FC = () => {
                   <td className="px-4 py-2">{cls.name}</td>
                   <td className="px-4 py-2">{cls.ageRange}</td>
                   <td className="px-4 py-2">{cls.capacity}</td>
+                  <td className="px-4 py-2">
+                    <select
+                      className="border rounded p-1"
+                      value={selectedChild[cls._id] || ''}
+                      onChange={(e) =>
+                        setSelectedChild(prev => ({ ...prev, [cls._id]: e.target.value }))
+                      }
+                    >
+                      <option value="">Select child</option>
+                      {childrenOptions.map(opt => (
+                        <option key={opt.id} value={opt.id}>{opt.label}</option>
+                      ))}
+                    </select>
+                    <Button
+                      size="sm"
+                      className="ml-2"
+                      onClick={() =>
+                        selectedChild[cls._id] &&
+                        assignChildMutation.mutate({
+                          classId: cls._id,
+                          childId: selectedChild[cls._id],
+                        })
+                      }
+                      disabled={!selectedChild[cls._id] || assignChildMutation.isPending}
+                    >
+                      Assign
+                    </Button>
+                  </td>
                   <td className="px-4 py-2 text-right">
                     <Button
                       size="sm"
@@ -82,7 +146,7 @@ const ClassManagement: React.FC = () => {
               ))}
               {classes.length === 0 && (
                 <tr>
-                  <td className="px-4 py-2" colSpan={4}>
+                  <td className="px-4 py-2" colSpan={5}>
                     No classes found.
                   </td>
                 </tr>
