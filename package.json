@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-popover": "^1.1.14",
     "date-fns": "^4.1.0",
     "react-day-picker": "^9.8.0"

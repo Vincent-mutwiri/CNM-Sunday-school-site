@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/utils/api';
+import type { User } from '@/types';
 import { toast } from 'sonner';
 
 const classFormSchema = z.object({
@@ -15,18 +17,22 @@ const classFormSchema = z.object({
   ageRange: z.string().min(1, 'Age range is required'),
   capacity: z.number().min(1, 'Capacity must be at least 1'),
   description: z.string().optional(),
+  teacher: z.string().min(1, 'Teacher is required'),
 });
 
 type ClassFormValues = z.infer<typeof classFormSchema>;
 
+interface ClassFormData {
+  _id: string;
+  name: string;
+  ageRange: string;
+  capacity: number;
+  description?: string;
+  teacher?: string;
+}
+
 interface ClassFormProps {
-  classData?: {
-    _id: string;
-    name: string;
-    ageRange: string;
-    capacity: number;
-    description?: string;
-  };
+  classData?: ClassFormData;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -42,14 +48,28 @@ export const ClassForm: React.FC<ClassFormProps> = ({
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<ClassFormValues>({
     resolver: zodResolver(classFormSchema),
-    defaultValues: classData || {
-      name: '',
-      ageRange: '',
-      capacity: 10,
-      description: '',
+    defaultValues: {
+      name: classData?.name || '',
+      ageRange: classData?.ageRange || '',
+      capacity: classData?.capacity || 10,
+      description: classData?.description || '',
+      teacher: classData?.teacher || '',
+    },
+  });
+
+  const selectedTeacher = watch('teacher');
+  
+  // Fetch teachers for the dropdown
+  const { data: teachersData } = useQuery<User[]>({
+    queryKey: ['teachers'],
+    queryFn: async (): Promise<User[]> => {
+      const response = await apiClient.get<{ users: User[] }>('/users/teachers');
+      return response.users || [];
     },
   });
 
@@ -140,13 +160,34 @@ export const ClassForm: React.FC<ClassFormProps> = ({
         <Textarea
           id="description"
           {...register('description')}
-          placeholder="Class description..."
+          className="mt-1"
           rows={3}
         />
         {errors.description && (
-          <p className="text-sm text-red-500 mt-1">
-            {errors.description.message}
-          </p>
+          <p className="text-sm text-red-500">{errors.description.message}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="teacher">Teacher</Label>
+        <Select
+          value={selectedTeacher}
+          onValueChange={(value) => setValue('teacher', value, { shouldValidate: true })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a teacher" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">No teacher</SelectItem>
+            {teachersData?.map((teacher: User) => (
+              <SelectItem key={teacher._id} value={teacher._id}>
+                {teacher.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {errors.teacher && (
+          <p className="text-sm text-red-500">{errors.teacher.message}</p>
         )}
       </div>
 

@@ -5,7 +5,8 @@ import {
   getClassById, 
   updateClass, 
   deleteClass, 
-  assignStudentToClass 
+  assignStudentToClass,
+  getTeacherClasses
 } from '../controllers/classController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { checkRole } from '../middleware/roleMiddleware';
@@ -17,6 +18,9 @@ router.post('/', authMiddleware, checkRole(['Admin']), createClass);
 router.put('/:id', authMiddleware, checkRole(['Admin']), updateClass);
 router.delete('/:id', authMiddleware, checkRole(['Admin']), deleteClass);
 router.post('/:id/assign-student', authMiddleware, checkRole(['Admin']), assignStudentToClass);
+
+// Teacher routes
+router.get('/teacher/classes', authMiddleware, checkRole(['Teacher']), getTeacherClasses);
 
 // Authenticated routes
 router.get('/', authMiddleware, getAllClasses);

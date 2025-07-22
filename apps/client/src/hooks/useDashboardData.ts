@@ -72,11 +72,21 @@ export const useTeacherDashboard = () => {
     queryFn: async (): Promise<{ resources: Resource[] }> => apiClient.get('/resources'),
   });
 
+  const classesQuery = useQuery({
+    queryKey: ['teacher', 'classes'],
+    queryFn: async (): Promise<{ classes: Class[] }> => 
+      apiClient.get('/classes/teacher/classes'),
+  });
+
   return {
     schedules: schedulesQuery.data?.schedules ?? [],
     events: eventsQuery.data?.events ?? [],
     resources: resourcesQuery.data?.resources ?? [],
+    classes: classesQuery.data?.classes ?? [],
     isLoading:
-      schedulesQuery.isLoading || eventsQuery.isLoading || resourcesQuery.isLoading,
+      schedulesQuery.isLoading || 
+      eventsQuery.isLoading || 
+      resourcesQuery.isLoading ||
+      classesQuery.isLoading,
   };
 };

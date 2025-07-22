@@ -90,16 +90,23 @@ export const updateUserRole = async (req: AuthRequest, res: Response) => {
 export const deleteUser = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-
-    const user = await User.findByIdAndDelete(id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    res.json({ message: 'User deleted successfully' });
+    await User.findByIdAndDelete(id);
+    res.json({ success: true, message: 'User deleted successfully' });
   } catch (error) {
     console.error('Delete user error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
+export const getTeachers = async (req: AuthRequest, res: Response) => {
+  try {
+    const teachers = await User.find({ role: 'Teacher' })
+      .select('-password -__v -createdAt -updatedAt')
+      .lean();
+    
+    res.json({ users: teachers });
+  } catch (error) {
+    console.error('Get teachers error:', error);
+    res.status(500).json({ success: false, message: 'Error fetching teachers' });
+  }
+};

@@ -1,10 +1,11 @@
 export interface User {
-  id: string;
+  _id: string;
   name: string;
   email: string;
   role: 'Admin' | 'Teacher' | 'Parent';
+  password?: string;
   profilePictureUrl: string;
-  children?: Child[];
+  children?: string[] | Child[];
   createdAt: string;
   updatedAt: string;
 }
@@ -40,17 +41,27 @@ export interface Class {
   ageRange: string;
   capacity: number;
   description?: string;
+<<<<<<< HEAD
   teacher?: string | { id: string; name: string };
+=======
+  teacher?: string | User;
+>>>>>>> d0ac758 (Admin: ixed the table layout in the Class Management section to show teacher section)
   createdAt: string;
   updatedAt: string;
 }
 
 export interface Schedule {
   _id: string;
-  class: string | Class;
+  title: string;
+  description?: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  class?: string | Class;
+  className?: string; // For display purposes when populated
   teacher: string | User;
   students: string[] | Child[];
-  date: string;
+  status: 'Scheduled' | 'Completed' | 'Cancelled';
   createdAt: string;
   updatedAt: string;
 }

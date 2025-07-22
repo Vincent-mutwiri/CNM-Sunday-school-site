@@ -1,355 +1,339 @@
-import React, { useEffect, useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/utils/api';
-import type { Class as BaseClass, Schedule as BaseSchedule, User as BaseUser } from '@/types';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { toast } from 'sonner';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 
-// Define response types
-interface ClassesResponse {
-  classes: Class[];
-}
+// UTILS & TYPES (Assuming these are in your project)
+import { apiClient } from '@/utils/api'; 
+import { Schedule, Class, User } from '@/types'; 
 
-interface UsersResponse {
-  users: User[];
-}
-
-// Define a union type for the possible API response structures
-type ApiResponse<T> = 
-  | T 
-  | { data: T };
-
-interface SchedulesResponse {
-  schedules: Schedule[];
-}
-
-// Extended types to handle both id and _id fields
-type WithId<T> = T & { id?: string; _id?: string };
-
-// Define our local types that extend the base types with both id and _id
-type User = WithId<BaseUser>;
-type Class = WithId<BaseClass>;
-type Schedule = WithId<Omit<BaseSchedule, 'class' | 'teacher'>> & {
-  class: string | Class;
-  teacher: string | User;
-};
-
-// Helper function to safely get ID from any object that might have id or _id
-const safeGetId = (item: { id?: string; _id?: string } | string | undefined): string => {
-  if (!item) return '';
-  if (typeof item === 'string') return item;
-  return item.id || item._id || '';
-};
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+// SHADCN/UI COMPONENTS
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-interface ScheduleFormData {
-  classId: string;
-  teacherId: string;
-  date: string;
-}
+// =================================================================
+// 1. ZOD SCHEMA & TYPES
+// =================================================================
+
+const scheduleFormSchema = z.object({
+  classId: z.string().min(1, 'A class must be selected.'),
+  teacherId: z.string().min(1, 'A teacher must be selected.'),
+  date: z.string().min(1, 'A date and time must be selected.'),
+});
+
+type ScheduleFormData = z.infer<typeof scheduleFormSchema>;
+
+// Extend the base Schedule type to ensure nested objects are populated
+type PopulatedSchedule = Schedule & {
+  class: Class;
+  teacher: User;
+};
+
+// =================================================================
+// 2. HELPER COMPONENT: DeleteConfirmationDialog (Reusable)
+// =================================================================
+
+type DeleteConfirmationDialogProps = {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+  isPending: boolean;
+};
+
+const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({ isOpen, onOpenChange, onConfirm, isPending }) => (
+  <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Are you absolutely sure?</DialogTitle>
+        <p className="text-sm text-gray-500">
+          This action cannot be undone. This will permanently delete the schedule entry.
+        </p>
+      </DialogHeader>
+      <DialogFooter className="mt-4">
+        <Button 
+          variant="outline" 
+          onClick={() => onOpenChange(false)}
+          disabled={isPending}
+        >
+          Cancel
+        </Button>
+        <Button 
+          variant="destructive" 
+          onClick={onConfirm} 
+          disabled={isPending}
+        >
+          {isPending ? 'Deleting...' : 'Delete'}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+);
+
+
+// =================================================================
+// 3. HELPER COMPONENT: ScheduleFormDialog
+// =================================================================
+
+type ScheduleFormDialogProps = {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  scheduleData?: Schedule | null;
+  classes: Class[];
+  teachers: User[];
+};
+
+const ScheduleFormDialog: React.FC<ScheduleFormDialogProps> = ({ isOpen, onOpenChange, scheduleData, classes, teachers }) => {
+  const queryClient = useQueryClient();
+  const isEditMode = !!scheduleData;
+
+  const form = useForm<ScheduleFormData>({
+    resolver: zodResolver(scheduleFormSchema),
+    defaultValues: { classId: '', teacherId: '', date: '' },
+  });
+
+  useEffect(() => {
+    if (isEditMode && scheduleData) {
+      // The backend sends a full ISO string, but datetime-local input needs `YYYY-MM-DDTHH:mm`
+      const formattedDate = scheduleData.date ? new Date(scheduleData.date).toISOString().slice(0, 16) : '';
+      form.reset({
+        classId: typeof scheduleData.class === 'string' ? scheduleData.class : scheduleData.class?._id || '',
+        teacherId: typeof scheduleData.teacher === 'string' ? scheduleData.teacher : scheduleData.teacher?._id || '',
+        date: formattedDate,
+      });
+    } else {
+      form.reset({ classId: '', teacherId: '', date: '' });
+    }
+  }, [scheduleData, isEditMode, form]);
+
+  const { mutate: saveSchedule, isPending } = useMutation({
+    mutationFn: (data: ScheduleFormData) => {
+      // Convert local datetime string back to ISO string for the backend
+      const payload = { ...data, date: new Date(data.date).toISOString() };
+      if (isEditMode && scheduleData?._id) {
+        return apiClient.put(`/schedules/${scheduleData._id}`, payload);
+      }
+      return apiClient.post('/schedules', payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      toast.success(isEditMode ? 'Schedule updated successfully' : 'Schedule created successfully');
+      onOpenChange(false);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to save schedule.');
+    },
+  });
+
+  const onSubmit = (data: ScheduleFormData) => saveSchedule(data);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>{isEditMode ? 'Edit Schedule' : 'Create New Schedule'}</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <FormField control={form.control} name="classId" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Class</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger><SelectValue placeholder="Select a class" /></SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {classes.map((cls) => (<SelectItem key={cls._id} value={cls._id}>{cls.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="teacherId" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Teacher</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger><SelectValue placeholder="Select a teacher" /></SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {teachers.map((teacher) => (<SelectItem key={teacher._id} value={teacher._id}>{teacher.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="date" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Date and Time</FormLabel>
+                <FormControl><Input type="datetime-local" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>Cancel</Button>
+              <Button type="submit" disabled={isPending}>{isPending ? 'Saving...' : 'Save Schedule'}</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+
+// =================================================================
+// 4. HELPER COMPONENT: ScheduleTable
+// =================================================================
+
+type ScheduleTableProps = {
+  schedules: PopulatedSchedule[];
+  onEdit: (schedule: Schedule) => void;
+  onDelete: (id: string) => void;
+  isLoading: boolean;
+};
+
+const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, onEdit, onDelete, isLoading }) => {
+  if (isLoading) {
+    return <div>Loading schedules...</div>; // Or a skeleton loader
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-md border">
+      <table className="min-w-full divide-y divide-gray-200 text-sm">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase">Class</th>
+            <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase">Teacher</th>
+            <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase">Date</th>
+            <th className="px-4 py-3 text-right font-medium text-gray-500 uppercase">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200 bg-white">
+          {schedules.length === 0 ? (
+            <tr><td colSpan={4} className="px-4 py-4 text-center text-gray-500">No upcoming schedules.</td></tr>
+          ) : (
+            schedules.map((schedule) => (
+              <tr key={schedule._id} className="hover:bg-gray-50">
+                <td className="px-4 py-3 font-medium text-gray-900">{schedule.class?.name || 'N/A'}</td>
+                <td className="px-4 py-3 text-gray-700">{schedule.teacher?.name || 'N/A'}</td>
+                <td className="px-4 py-3 text-gray-700">{new Date(schedule.date).toLocaleString()}</td>
+                <td className="px-4 py-3 text-right space-x-1 whitespace-nowrap">
+                  <Button variant="ghost" size="icon" onClick={() => onEdit(schedule)}><Pencil className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => onDelete(schedule._id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+
+// =================================================================
+// 5. MAIN COMPONENT: Scheduling
+// =================================================================
 
 const Scheduling: React.FC = () => {
   const queryClient = useQueryClient();
 
-  const { data: schedulesResponse, isLoading } = useQuery<SchedulesResponse>({
+  const [formDialogState, setFormDialogState] = useState<{ open: boolean; scheduleData?: Schedule | null }>({ open: false });
+  const [deleteDialogState, setDeleteDialogState] = useState<{ open: boolean; scheduleId?: string }>({ open: false });
+
+  // Fetch Schedules
+  const { data: schedulesResponse, isLoading: isLoadingSchedules, isError: isSchedulesError, error: schedulesError } = useQuery<{ schedules: PopulatedSchedule[] }>({
     queryKey: ['schedules'],
-    queryFn: async (): Promise<SchedulesResponse> => {
-      try {
-        const response = await apiClient.get<ApiResponse<{ schedules: Schedule[] }>>('/schedules');
-        
-        // Handle { data: { schedules: [...] } } structure
-        if (response && 'data' in response) {
-          return { schedules: response.data?.schedules || [] };
-        }
-        
-        // Handle { schedules: [...] } structure
-        if (response && 'schedules' in response) {
-          return { schedules: response.schedules };
-        }
-        
-        // If we get here, the response doesn't match expected formats
-        console.warn('Unexpected API response format:', response);
-        return { schedules: [] };
-      } catch (error) {
-        console.error('Error fetching schedules:', error);
-        return { schedules: [] };
-      }
-    }
+    queryFn: () => apiClient.get('/schedules'),
   });
 
-  // Response types are now defined at the top level
-
-  const { data: classData } = useQuery<ClassesResponse>({
+  // Fetch Classes
+  const { data: classesResponse, isLoading: isLoadingClasses } = useQuery<{ classes: Class[] }>({
     queryKey: ['classes'],
-    queryFn: async (): Promise<ClassesResponse> => {
-      try {
-        const response = await apiClient.get<ApiResponse<{ classes: Class[] }>>('/classes');
-        
-        // Handle different response structures
-        if (Array.isArray(response)) {
-          return { classes: response };
-        }
-        
-        // Handle { data: { classes: [...] } } structure
-        if (response && 'data' in response && response.data) {
-          const data = response.data as any;
-          return { 
-            classes: Array.isArray(data) ? data : 
-                    data?.classes || [] 
-          };
-        }
-        
-        // Handle { classes: [...] } structure
-        if (response && 'classes' in response) {
-          return { classes: response.classes };
-        }
-        
-        return { classes: [] };
-      } catch (error) {
-        console.error('Error fetching classes:', error);
-        return { classes: [] };
-      }
-    }
+    queryFn: () => apiClient.get('/classes'),
   });
 
-  const { data: userData } = useQuery<UsersResponse>({
-    queryKey: ['teachers'],
-    queryFn: async (): Promise<UsersResponse> => {
-      try {
-        const response = await apiClient.get<ApiResponse<{ users: User[] }>>('/users');
-        
-        // Handle different response structures
-        if (Array.isArray(response)) {
-          return { users: response };
-        }
-        
-        // Handle { data: { users: [...] } } structure
-        if (response && 'data' in response && response.data) {
-          const data = response.data as any;
-          return { 
-            users: Array.isArray(data) ? data : 
-                  data?.users || [] 
-          };
-        }
-        
-        // Handle { users: [...] } structure
-        if (response && 'users' in response) {
-          return { users: response.users };
-        }
-        
-        return { users: [] };
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        return { users: [] };
-      }
-    }
+  // Fetch Teachers
+  const { data: teachersResponse, isLoading: isLoadingTeachers } = useQuery<{ users: User[] }>({
+    queryKey: ['users', { role: 'Teacher' }], // More specific query key
+    queryFn: () => apiClient.get('/users/teachers'),
   });
 
-  const classes = classData?.classes || [];
-  const teachers = (userData?.users || []).filter((u) => u.role === 'Teacher');
-
-  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
-
-  const { register, handleSubmit, setValue, reset, watch } = useForm<ScheduleFormData>({
-    defaultValues: { classId: '', teacherId: '', date: '' }
-  });
-  const selectedClass: string = watch('classId') || '';
-  const selectedTeacher: string = watch('teacherId') || '';
-
-  useEffect(() => {
-    if (editingSchedule) {
-      const cls = safeGetId(editingSchedule.class);
-      const teacher = safeGetId(editingSchedule.teacher);
-      reset({
-        classId: cls,
-        teacherId: teacher,
-        date: editingSchedule.date.slice(0, 16)
-      });
-    } else {
-      reset({ classId: '', teacherId: '', date: '' });
-    }
-  }, [editingSchedule, reset]);
-
-  const createSchedule = useMutation({
-    mutationFn: (data: ScheduleFormData) =>
-      apiClient.post('/schedules', {
-        classId: data.classId,
-        teacherId: data.teacherId,
-        date: new Date(data.date).toISOString()
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
-      reset({ classId: '', teacherId: '', date: '' });
-    }
-  });
-
-  const updateSchedule = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: ScheduleFormData }) =>
-      apiClient.put(`/schedules/${id}`, {
-        classId: data.classId,
-        teacherId: data.teacherId,
-        date: new Date(data.date).toISOString()
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
-      setEditingSchedule(null);
-      reset({ classId: '', teacherId: '', date: '' });
-    }
-  });
-
-  const deleteSchedule = useMutation({
+  // Mutation for deleting a schedule
+  const { mutate: deleteSchedule, isPending: isDeleting } = useMutation({
     mutationFn: (id: string) => apiClient.delete(`/schedules/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
-    }
+      toast.success('Schedule deleted successfully');
+      setDeleteDialogState({ open: false });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete schedule.');
+    },
   });
 
-  const onSubmit = (formData: ScheduleFormData) => {
-    if (editingSchedule) {
-      updateSchedule.mutate({ id: editingSchedule._id, data: formData });
-    } else {
-      createSchedule.mutate(formData);
+  const handleOpenCreate = () => setFormDialogState({ open: true, scheduleData: null });
+  const handleOpenEdit = (schedule: Schedule) => setFormDialogState({ open: true, scheduleData: schedule });
+  const handleDeleteRequest = (id: string) => setDeleteDialogState({ open: true, scheduleId: id });
+  const handleConfirmDelete = () => {
+    if (deleteDialogState.scheduleId) {
+      deleteSchedule(deleteDialogState.scheduleId);
     }
   };
 
-  if (isLoading) {
-    return <div>Loading schedules...</div>;
-  }
-
   const schedules = schedulesResponse?.schedules || [];
+  const classes = classesResponse?.classes || [];
+  const teachers = teachersResponse?.users || [];
+  const isLoading = isLoadingSchedules || isLoadingClasses || isLoadingTeachers;
+
+  if (isSchedulesError) {
+    return <div className="p-4 text-red-500 bg-red-50 rounded-md">Error loading schedules: {schedulesError.message}</div>;
+  }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Scheduling</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Class Scheduling</h1>
+        <Button onClick={handleOpenCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          Create Schedule
+        </Button>
+      </div>
+
       <Card>
-        <CardHeader>
-          <CardTitle>{editingSchedule ? 'Edit Schedule' : 'Add Schedule'}</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Upcoming Schedules</CardTitle></CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <Label htmlFor="class">Class</Label>
-              <Select
-                value={selectedClass}
-                onValueChange={(val) => setValue('classId', val)}
-              >
-                <SelectTrigger id="class">
-                  <SelectValue placeholder="Select class" />
-                </SelectTrigger>
-                <SelectContent>
-                  {classes.map((cls) => (
-                    <SelectItem 
-                      key={cls._id || ''} 
-                      value={cls._id || ''}
-                    >
-                      {cls.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <input type="hidden" {...register('classId')} />
-            </div>
-            <div>
-              <Label htmlFor="teacher">Teacher</Label>
-              <Select
-                value={selectedTeacher}
-                onValueChange={(val) => setValue('teacherId', val)}
-              >
-                <SelectTrigger id="teacher">
-                  <SelectValue placeholder="Select teacher" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teachers.map((t) => (
-                    <SelectItem 
-                      key={t._id || ''} 
-                      value={t._id || ''}
-                    >
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <input type="hidden" {...register('teacherId')} />
-            </div>
-            <div>
-              <Label htmlFor="date">Date</Label>
-              <Input type="datetime-local" id="date" {...register('date', { required: true })} />
-            </div>
-            <div className="flex space-x-2 pt-2">
-              {editingSchedule && (
-                <Button type="button" variant="outline" onClick={() => setEditingSchedule(null)}>
-                  Cancel
-                </Button>
-              )}
-              <Button type="submit" disabled={createSchedule.isPending || updateSchedule.isPending}>
-                {editingSchedule ? 'Update Schedule' : 'Add Schedule'}
-              </Button>
-            </div>
-          </form>
+          <ScheduleTable
+            schedules={schedules}
+            isLoading={isLoading}
+            onEdit={handleOpenEdit}
+            onDelete={handleDeleteRequest}
+          />
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Schedules</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">
-                  Class
-                </th>
-                <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">
-                  Teacher
-                </th>
-                <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">
-                  Date
-                </th>
-                <th className="px-4 py-2" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {schedules.map((schedule: Schedule) => (
-                <tr key={schedule._id}>
-                  <td className="px-4 py-2">{(schedule.class as any).name}</td>
-                  <td className="px-4 py-2">{(schedule.teacher as any).name}</td>
-                  <td className="px-4 py-2">
-                    {new Date(schedule.date).toLocaleString()}
-                  </td>
-                  <td className="px-4 py-2 text-right space-x-2">
-                    <Button size="sm" variant="outline" onClick={() => setEditingSchedule(schedule)}>
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => deleteSchedule.mutate(schedule._id)}
-                    >
-                      Delete
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              {schedules.length === 0 && (
-                <tr>
-                  <td className="px-4 py-2" colSpan={4}>
-                    No schedules found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+
+      <ScheduleFormDialog
+        isOpen={formDialogState.open}
+        onOpenChange={(open) => setFormDialogState({ ...formDialogState, open })}
+        scheduleData={formDialogState.scheduleData}
+        classes={classes}
+        teachers={teachers}
+      />
+
+      <DeleteConfirmationDialog
+        isOpen={deleteDialogState.open}
+        onOpenChange={(open) => setDeleteDialogState({ ...deleteDialogState, open })}
+        onConfirm={handleConfirmDelete}
+        isPending={isDeleting}
+      />
     </div>
   );
 };

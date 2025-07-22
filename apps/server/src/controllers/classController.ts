@@ -1,5 +1,6 @@
 import { Response } from 'express';
-import Class from '../models/class.model';
+import { Schema } from 'mongoose';
+import Class, { IClass } from '../models/class.model';
 import Child from '../models/child.model';
 import { AuthRequest } from '../middleware/authMiddleware';
 
@@ -75,7 +76,16 @@ export const updateClass = async (req: AuthRequest, res: Response) => {
 export const deleteClass = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-
+    
+    // Check if there are students assigned to this class
+    const studentsInClass = await Child.countDocuments({ assignedClass: id });
+    
+    if (studentsInClass > 0) {
+      return res.status(400).json({ 
+        message: 'Cannot delete class with assigned students. Please reassign or remove students first.' 
+      });
+    }
+    
     // Remove class assignment from all children
     await Child.updateMany({ assignedClass: id }, { $unset: { assignedClass: 1 } });
 
@@ -84,10 +94,61 @@ export const deleteClass = async (req: AuthRequest, res: Response) => {
     if (!deletedClass) {
       return res.status(404).json({ message: 'Class not found' });
     }
-
+    
     res.json({ message: 'Class deleted successfully' });
   } catch (error) {
     console.error('Delete class error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Interface for the teacher data returned from populate
+export interface ITeacherData {
+  _id: string;
+  name: string;
+  email: string;
+}
+
+// Interface for the student data returned from populate
+interface IStudentData {
+  _id: string;
+  name: string;
+}
+
+// Interface for the populated class document
+interface IPopulatedClass extends Omit<IClass, 'teacher' | 'students'> {
+  teacher: ITeacherData;
+  students: IStudentData[];
+  studentCount: number;
+}
+
+export const getTeacherClasses = async (req: AuthRequest, res: Response) => {
+  try {
+    const teacherId = req.user?._id;
+    
+    if (!teacherId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    
+    // Find all classes where the teacher is assigned
+    const classes = await Class.find({ teacher: teacherId })
+      .populate<{ teacher: ITeacherData }>('teacher', 'name email')
+      .populate<{ students: IStudentData[] }>('students', 'name')
+      .lean()
+      .exec() as unknown as Array<Omit<IClass, 'teacher' | 'students'> & { 
+        teacher: ITeacherData; 
+        students: IStudentData[];
+      }>;
+      
+    // Transform the data to include student count
+    const classesWithStudentCount = classes.map(cls => ({
+      ...cls,
+      studentCount: cls.students?.length || 0
+    }));
+    
+    res.json({ classes: classesWithStudentCount });
+  } catch (error) {
+    console.error('Get teacher classes error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

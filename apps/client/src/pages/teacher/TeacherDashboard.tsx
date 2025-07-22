@@ -1,126 +1,255 @@
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Calendar, Users, FileText, Plus } from 'lucide-react';
-import { formatDate, formatTime } from '@/lib/dateUtils';
-import { useTeacherDashboard } from '@/hooks/useDashboardData';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+
+// UTILS & TYPES (Assuming these are in your project)
+import { apiClient } from '@/utils/api';
+import { formatDate, formatTime } from '@/lib/utils'; // Using one consistent utils import
+import { Schedule, Class, User, Resource, Event } from '@/types'; // Assuming Event type exists
+
+// SHADCN/UI COMPONENTS
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+
+// ICONS
+import { Calendar, Users, Plus, BookOpen, Megaphone } from 'lucide-react';
+
+// =================================================================
+// 1. DATA FETCHING HOOK (Mockup of your useTeacherDashboard)
+// =================================================================
+// This hook encapsulates all data fetching for the dashboard.
+type PopulatedSchedule = Schedule & { class: Class; students: User[] };
+
+const useTeacherDashboard = () => {
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['teacherDashboard'],
+    queryFn: async () => {
+      // In a real app, this would be a single API endpoint that aggregates data
+      const [schedulesRes, classesRes, resourcesRes, eventsRes] = await Promise.all([
+        apiClient.get<{ schedules: PopulatedSchedule[] }>('/schedules/teacher/me'),
+        apiClient.get<{ classes: Class[] }>('/classes/teacher/me'),
+        apiClient.get<{ resources: Resource[] }>('/resources/teacher/me'),
+        apiClient.get<{ events: Event[] }>('/events'),
+      ]);
+      return {
+        schedules: schedulesRes.schedules || [],
+        classes: classesRes.classes || [],
+        resources: resourcesRes.resources || [],
+        events: eventsRes.events || [],
+      };
+    },
+  });
+
+  return { data, isLoading, isError, error };
+};
+
+// =================================================================
+// 2. SUB-COMPONENT: Dashboard Skeleton (Loading State)
+// =================================================================
+
+const DashboardSkeleton: React.FC = () => (
+  <div className="space-y-6">
+    <div className="h-9 w-1/3 bg-gray-200 rounded animate-pulse"></div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="h-6 w-1/2 bg-gray-200 rounded animate-pulse"></div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-4">
+              <div className="h-12 w-12 bg-gray-200 rounded-full animate-pulse"></div>
+              <div className="space-y-2">
+                <div className="h-4 w-[250px] bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-[200px] bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="h-12 w-12 bg-gray-200 rounded-full animate-pulse"></div>
+              <div className="space-y-2">
+                <div className="h-4 w-[250px] bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-[200px] bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <div className="h-6 w-1/2 bg-gray-200 rounded animate-pulse"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-20 w-full bg-gray-200 rounded animate-pulse"></div>
+          </CardContent>
+        </Card>
+      </div>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="h-6 w-3/4 bg-gray-200 rounded animate-pulse"></div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <div className="h-6 w-3/4 bg-gray-200 rounded animate-pulse"></div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="h-4 w-full bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-4 w-5/6 bg-gray-200 rounded animate-pulse"></div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  </div>
+);
+
+// =================================================================
+// 3. SUB-COMPONENT: Dashboard Cards
+// =================================================================
+
+const UpcomingScheduleCard: React.FC<{ schedules: PopulatedSchedule[] }> = ({ schedules }) => {
+  const navigate = useNavigate();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center"><Calendar className="mr-2 h-5 w-5 text-blue-500" /> My Upcoming Schedule</CardTitle>
+        <CardDescription>Your next teaching assignments. Click to mark attendance.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {schedules.length > 0 ? (
+            schedules.slice(0, 3).map((schedule) => (
+              <div key={schedule._id} className="flex items-center justify-between p-3 rounded-md border hover:bg-gray-50">
+                <div>
+                  <p className="font-semibold text-gray-800">{schedule.class?.name}</p>
+                  <p className="text-sm text-gray-500">
+                    {formatDate(schedule.date)} at {formatTime(schedule.date)}
+                  </p>
+                  <p className="text-xs text-gray-400">{schedule.students?.length || 0} students expected</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => navigate(`/teacher/attendance/${schedule._id}`)}>
+                  Mark Attendance
+                </Button>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-6 text-gray-500">
+              <Calendar className="mx-auto h-12 w-12 text-gray-300" />
+              <p className="mt-2">You have no upcoming classes scheduled.</p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const QuickActionsCard: React.FC = () => {
+  const navigate = useNavigate();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5 text-green-500" /> Quick Actions</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <Button className="w-full justify-start" variant="outline" onClick={() => navigate('/teacher/resources/upload')}><Plus className="mr-2 h-4 w-4" /> Upload a Resource</Button>
+        <Button className="w-full justify-start" variant="outline" onClick={() => navigate('/teacher/gallery/upload')}><Plus className="mr-2 h-4 w-4" /> Add Gallery Photos</Button>
+        <Button className="w-full justify-start" variant="outline" onClick={() => navigate('/teacher/events/new')}><Plus className="mr-2 h-4 w-4" /> Create an Event</Button>
+      </CardContent>
+    </Card>
+  );
+};
+
+const AnnouncementsCard: React.FC<{ events: Event[] }> = ({ events }) => {
+  const navigate = useNavigate();
+  const latestAnnouncement = events.find(e => e.type === 'Announcement');
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center"><Megaphone className="mr-2 h-5 w-5 text-orange-500" /> Announcements</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {latestAnnouncement ? (
+          <div>
+            <p className="font-semibold text-gray-800">{latestAnnouncement.title}</p>
+            <p className="text-sm text-gray-600 line-clamp-2 mt-1">{latestAnnouncement.description}</p>
+            <Button variant="link" className="px-0 h-auto mt-2" onClick={() => navigate('/events')}>View all</Button>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500 text-center py-4">No recent announcements.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+const MyClassesCard: React.FC<{ classes: Class[] }> = ({ classes }) => {
+  const navigate = useNavigate();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center"><BookOpen className="mr-2 h-5 w-5 text-indigo-500" /> My Assigned Classes</CardTitle>
+        <CardDescription>Classes you are assigned to teach.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {classes.length > 0 ? (
+          <div className="space-y-2">
+            {classes.map(cls => (
+              <div key={cls._id} className="flex justify-between items-center p-2 border-b">
+                <div>
+                  <p className="font-medium">{cls.name}</p>
+                  <p className="text-xs text-gray-500">{cls.ageRange}</p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => navigate(`/classes/${cls._id}`)}>Details</Button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500 text-center py-4">You are not assigned to any classes yet.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// =================================================================
+// 4. MAIN COMPONENT: TeacherDashboard
+// =================================================================
 
 const TeacherDashboard: React.FC = () => {
-  const { schedules, events, resources, isLoading } = useTeacherDashboard();
-  const navigate = useNavigate();
+  const { data, isLoading, isError, error } = useTeacherDashboard();
+
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
+
+  if (isError) {
+    return <div className="p-4 text-red-500 bg-red-50 rounded-md">Error loading dashboard: {error?.message}</div>;
+  }
+  
+  const { schedules = [], classes = [], events = [] } = data || {};
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Teacher Dashboard</h1>
-
-      {isLoading && <p>Loading...</p>}
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div 
-          className="bg-blue-50 border border-blue-200 rounded-lg p-4 cursor-pointer hover:bg-blue-100 transition-colors"
-          onClick={() => navigate('/teacher/events')}
-        >
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-blue-800">Latest Announcement</h2>
-            <span className="text-sm text-blue-600 hover:underline">View All</span>
-          </div>
-          <p className="text-blue-700 mt-2">
-            {events[0] ? events[0].title : 'No announcements available'}
-          </p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Main Content Column */}
+        <div className="lg:col-span-2 space-y-6">
+          <UpcomingScheduleCard schedules={schedules} />
+          <MyClassesCard classes={classes} />
         </div>
 
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex flex-col justify-center">
-          <h2 className="text-lg font-semibold text-green-800 mb-2">Create New Event</h2>
-          <p className="text-green-700 mb-3">
-            Share important dates and announcements with parents and teachers.
-          </p>
-          <Button 
-            onClick={() => navigate('/teacher/events/new')}
-            className="bg-green-600 hover:bg-green-700 text-white self-start"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Create Event
-          </Button>
+        {/* Sidebar Column */}
+        <div className="space-y-6">
+          <QuickActionsCard />
+          <AnnouncementsCard events={events} />
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Calendar className="mr-2 h-5 w-5" />
-              My Upcoming Classes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {schedules.map((schedule) => (
-                <div key={schedule._id} className="border-l-4 border-blue-500 pl-3">
-                  <p className="font-medium">{(schedule.class as any).name}</p>
-                  <p className="text-sm text-gray-600">
-                    {formatDate(schedule.date)} - {formatTime(schedule.date)}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {(schedule.students as any[]).length} students
-                  </p>
-                </div>
-              ))}
-              {schedules.length === 0 && (
-                <p className="text-sm text-gray-500">No upcoming classes</p>
-              )}
-            </div>
-            <Button className="w-full mt-4" variant="outline">
-              View All Classes
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Users className="mr-2 h-5 w-5" />
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button className="w-full" variant="outline">
-              Mark Attendance
-            </Button>
-            <Button className="w-full" variant="outline">
-              Upload Resource
-            </Button>
-            <Button className="w-full" variant="outline">
-              Add Gallery Photos
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <FileText className="mr-2 h-5 w-5" />
-              Recent Resources
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {resources.slice(0, 3).map((res) => (
-                <div key={res._id} className="text-sm">
-                  <p className="font-medium">{res.title}</p>
-                  <p className={res.status === 'Pending' ? 'text-yellow-600' : 'text-gray-600'}>{res.status}</p>
-                </div>
-              ))}
-              {resources.length === 0 && (
-                <p className="text-sm text-gray-500">No resources uploaded</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
 };
 
 export default TeacherDashboard;
-

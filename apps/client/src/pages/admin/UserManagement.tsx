@@ -31,7 +31,12 @@ const UserManagement: React.FC = () => {
         console.log('Fetching users from /users endpoint...');
         const response = await apiClient.get<UsersResponse>('/users');
         console.log('Users API response:', response);
-        return response;
+        // Ensure all users have _id
+        const users = response.users.map(user => ({
+          ...user,
+          _id: (user as any)._id || (user as any).id // Handle both _id and id for backward compatibility
+        }));
+        return { users };
       } catch (err) {
         console.error('Error in users query:', err);
         toast.error('Failed to load users');
@@ -87,9 +92,9 @@ const UserManagement: React.FC = () => {
   });
 
   const deleteUserMutation = useMutation({
-    mutationFn: async (id: string) => {
-      console.log(`Deleting user ${id}`);
-      const response = await apiClient.delete(`/users/${id}`);
+    mutationFn: async (userId: string) => {
+      console.log(`Deleting user ${userId}`);
+      const response = await apiClient.delete(`/users/${userId}`);
       console.log('Delete user response:', response);
       return response;
     },
@@ -119,17 +124,14 @@ const UserManagement: React.FC = () => {
   }
 
   const handleRoleChange = (user: User, newRole: User['role']) => {
-    // Use either user.id or user._id, whichever is available
-    const userId = 'id' in user ? user.id : (user as any)._id;
-    
-    if (!userId) {
+    if (!user._id) {
       console.error('Cannot update role: User ID is undefined', { user });
       toast.error('Cannot update role: Invalid user');
       return;
     }
     
-    console.log('Updating user role:', { userId, newRole });
-    updateRoleMutation.mutate({ id: userId, role: newRole });
+    console.log('Updating user role:', { userId: user._id, newRole });
+    updateRoleMutation.mutate({ id: user._id, role: newRole });
   };
 
   const handleDeleteUser = (userId: string) => {
@@ -162,7 +164,7 @@ const UserManagement: React.FC = () => {
         <CardContent className="overflow-x-auto p-0">
           <div className="divide-y divide-gray-200">
             {users.map((user) => (
-              <div key={user.id} className="p-4 hover:bg-gray-50 transition-colors">
+              <div key={user._id} className="p-4 hover:bg-gray-50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
@@ -192,7 +194,7 @@ const UserManagement: React.FC = () => {
                       disabled={!!updatingUser}
                     >
                       <SelectTrigger className="w-[180px]">
-                        {updatingUser === user.id ? (
+                        {updatingUser === user._id ? (
                           <span className="flex items-center">
                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
                             Updating...
@@ -212,10 +214,10 @@ const UserManagement: React.FC = () => {
                       variant="ghost"
                       size="icon"
                       className="text-red-500 hover:bg-red-50"
-                      onClick={() => setUserToDelete(user.id)}
-                      disabled={deleteUserMutation.isPending && deleteUserMutation.variables === user.id}
+                      onClick={() => setUserToDelete(user._id)}
+                      disabled={deleteUserMutation.isPending && deleteUserMutation.variables === user._id}
                     >
-                      {deleteUserMutation.isPending && deleteUserMutation.variables === user.id ? (
+                      {deleteUserMutation.isPending && deleteUserMutation.variables === user._id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Trash2 className="h-4 w-4" />
@@ -225,7 +227,7 @@ const UserManagement: React.FC = () => {
                 </div>
                 
                 {/* Delete confirmation */}
-                {userToDelete === user.id && (
+                {userToDelete === user._id && (
                   <div className="mt-3 p-3 bg-red-50 rounded-md flex items-center justify-between">
                     <span className="text-sm text-red-700">
                       Are you sure you want to delete this user?
@@ -242,7 +244,7 @@ const UserManagement: React.FC = () => {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => handleDeleteUser(user.id)}
+                        onClick={() => handleDeleteUser(user._id)}
                         disabled={deleteUserMutation.isPending}
                       >
                         {deleteUserMutation.isPending ? (
