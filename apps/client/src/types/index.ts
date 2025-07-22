@@ -22,6 +22,18 @@ export interface Child {
   updatedAt: string;
 }
 
+export interface CreateChildInput {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  allergies?: string;
+  specialNotes?: string;
+}
+
+export interface UpdateChildInput extends Partial<Omit<CreateChildInput, 'dateOfBirth'>> {
+  dateOfBirth?: string; // Still optional but needs to be handled specially if needed
+}
+
 export interface Class {
   _id: string;
   name: string;

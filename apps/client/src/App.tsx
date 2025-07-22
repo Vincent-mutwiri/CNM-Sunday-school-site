@@ -18,7 +18,9 @@ import ResourceLibrary from '@/pages/ResourceLibrary';
 import TeacherResources from '@/pages/teacher/TeacherResources';
 import GalleryUpload from '@/pages/teacher/GalleryUpload';
 import TeacherClasses from '@/pages/teacher/TeacherClasses';
+import AttendanceMarking from '@/pages/teacher/AttendanceMarking';
 import Children from '@/pages/parent/Children';
+import Attendance from '@/pages/parent/Attendance';
 import ParentResources from '@/pages/parent/ParentResources';
 import ParentGallery from '@/pages/parent/ParentGallery';
 
@@ -74,13 +76,14 @@ const AppRoutes: React.FC = () => {
 
           {/* Teacher routes */}
           <Route path="teacher/classes" element={<TeacherClasses />} />
-          <Route path="teacher/attendance" element={<div>Attendance (Coming Soon)</div>} />
+          <Route path="teacher/attendance" element={<AttendanceMarking />} />
           <Route path="teacher/resources" element={<TeacherResources />} />
           <Route path="teacher/gallery" element={<GalleryUpload />} />
 
           {/* Parent routes */}
           <Route path="parent/children" element={<Children />} />
-          <Route path="parent/attendance" element={<div>Attendance (Coming Soon)</div>} />
+          <Route path="parent/attendance" element={<Attendance />} />
+          <Route path="parent/attendance/:childId" element={<Attendance />} />
           <Route path="parent/resources" element={<ParentResources />} />
           <Route path="parent/gallery" element={<ParentGallery />} />
 
