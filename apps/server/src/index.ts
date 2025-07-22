@@ -17,6 +17,7 @@ import attendanceRoutes from './routes/attendanceRoutes';
 import resourceRoutes from './routes/resourceRoutes';
 import eventRoutes from './routes/eventRoutes';
 import galleryRoutes from './routes/galleryRoutes';
+import settingsRoutes from './routes/settingsRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -55,6 +56,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/gallery', galleryRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
