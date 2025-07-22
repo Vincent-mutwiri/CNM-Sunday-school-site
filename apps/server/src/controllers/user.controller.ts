@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, RequestHandler as ExpressRequestHandler } from 'express';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import { parse } from 'csv-parse/sync';
@@ -17,7 +17,7 @@ import {
   ValidationError 
 } from '../utils/errors';
 import { 
-  uploadProfilePicture, 
+  uploadProfilePicture,
   getFileUrl, 
   deleteFile 
 } from '../utils/fileUpload';
@@ -164,9 +164,11 @@ export const deleteUserHandler = async (req: AuthRequest, res: Response, next: N
 };
 
 // Upload profile picture
+type AuthRequestHandler = (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>;
+
 export const uploadProfilePictureHandler: [
-  RequestHandler,
-  (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>
+  ExpressRequestHandler,
+  AuthRequestHandler
 ] = [
   uploadProfilePicture.single('profilePicture'),
   async (req: AuthRequest, res: Response, next: NextFunction) => {

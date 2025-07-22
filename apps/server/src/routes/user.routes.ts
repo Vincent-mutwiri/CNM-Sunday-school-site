@@ -19,9 +19,8 @@ router.put('/me/profile', userController.updateUserProfile);
 router.post('/me/availability', userController.updateMyAvailability);
 
 // Profile picture upload route with proper middleware typing
-router.post('/me/profile-picture', 
-  ...userController.uploadProfilePictureHandler as any
-);
+const [uploadMiddleware, uploadHandler] = userController.uploadProfilePictureHandler;
+router.post('/me/profile-picture', uploadMiddleware, uploadHandler);
 
 // Admin-only routes
 router.use(checkRole(['Admin']));
