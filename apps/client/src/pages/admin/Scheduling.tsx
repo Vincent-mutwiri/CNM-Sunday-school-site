@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { DayPicker } from 'react-day-picker';
 
 // UTILS & TYPES (Assuming these are in your project)
 import { apiClient } from '@/utils/api'; 
@@ -27,6 +28,12 @@ const scheduleFormSchema = z.object({
   classId: z.string().min(1, 'A class must be selected.'),
   teacherId: z.string().min(1, 'A teacher must be selected.'),
   date: z.string().min(1, 'A date and time must be selected.'),
+  room: z.string().min(1, 'Room is required'),
+  recurrence: z.object({
+    frequency: z.enum(['none','daily','weekly','monthly']),
+    interval: z.coerce.number().min(1).default(1),
+    count: z.coerce.number().optional(),
+  }).optional(),
 });
 
 type ScheduleFormData = z.infer<typeof scheduleFormSchema>;
@@ -96,8 +103,15 @@ const ScheduleFormDialog: React.FC<ScheduleFormDialogProps> = ({ isOpen, onOpenC
 
   const form = useForm<ScheduleFormData>({
     resolver: zodResolver(scheduleFormSchema),
-    defaultValues: { classId: '', teacherId: '', date: '' },
+    defaultValues: { classId: '', teacherId: '', date: '', room: '', recurrence: { frequency: 'none', interval: 1 } },
   });
+
+  const watchDate = form.watch('date');
+  const availableTeachers = React.useMemo(() => {
+    if (!watchDate) return teachers;
+    const dayName = new Date(watchDate).toLocaleDateString('en-US', { weekday: 'long' });
+    return teachers.filter(t => Array.isArray(t.availability) ? t.availability.includes(dayName) : true);
+  }, [watchDate, teachers]);
 
   useEffect(() => {
     if (isEditMode && scheduleData) {
@@ -107,16 +121,21 @@ const ScheduleFormDialog: React.FC<ScheduleFormDialogProps> = ({ isOpen, onOpenC
         classId: typeof scheduleData.class === 'string' ? scheduleData.class : scheduleData.class?._id || '',
         teacherId: typeof scheduleData.teacher === 'string' ? scheduleData.teacher : scheduleData.teacher?._id || '',
         date: formattedDate,
+        room: scheduleData.room || '',
+        recurrence: scheduleData.recurrence ? { frequency: scheduleData.recurrence.frequency, interval: scheduleData.recurrence.interval, count: scheduleData.recurrence.count } : { frequency: 'none', interval: 1 },
       });
     } else {
-      form.reset({ classId: '', teacherId: '', date: '' });
+      form.reset({ classId: '', teacherId: '', date: '', room: '', recurrence: { frequency: 'none', interval: 1 } });
     }
   }, [scheduleData, isEditMode, form]);
 
   const { mutate: saveSchedule, isPending } = useMutation({
     mutationFn: (data: ScheduleFormData) => {
       // Convert local datetime string back to ISO string for the backend
-      const payload = { ...data, date: new Date(data.date).toISOString() };
+      const payload: any = { ...data, date: new Date(data.date).toISOString() };
+      if (payload.recurrence && payload.recurrence.frequency === 'none') {
+        delete payload.recurrence;
+      }
       if (isEditMode && scheduleData?._id) {
         return apiClient.put(`/schedules/${scheduleData._id}`, payload);
       }
@@ -164,7 +183,9 @@ const ScheduleFormDialog: React.FC<ScheduleFormDialogProps> = ({ isOpen, onOpenC
                     <SelectTrigger><SelectValue placeholder="Select a teacher" /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {teachers.map((teacher) => (<SelectItem key={teacher._id} value={teacher._id}>{teacher.name}</SelectItem>))}
+                    {availableTeachers.map((teacher) => (
+                      <SelectItem key={teacher._id} value={teacher._id}>{teacher.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -174,6 +195,37 @@ const ScheduleFormDialog: React.FC<ScheduleFormDialogProps> = ({ isOpen, onOpenC
               <FormItem>
                 <FormLabel>Date and Time</FormLabel>
                 <FormControl><Input type="datetime-local" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="room" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Room</FormLabel>
+                <FormControl><Input {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="recurrence.frequency" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Repeat</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="recurrence.count" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Occurrences</FormLabel>
+                <FormControl><Input type="number" min="1" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
@@ -307,6 +359,12 @@ const Scheduling: React.FC = () => {
           Create Schedule
         </Button>
       </div>
+
+      <DayPicker
+        mode="single"
+        selected={undefined}
+        onSelect={() => {}}
+      />
 
       <Card>
         <CardHeader><CardTitle>Upcoming Schedules</CardTitle></CardHeader>

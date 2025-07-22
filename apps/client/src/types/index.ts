@@ -60,6 +60,12 @@ export interface Schedule {
   teacher: string | User;
   students: string[] | Child[];
   room?: string;
+  recurrence?: {
+    frequency: 'daily' | 'weekly' | 'monthly';
+    interval: number;
+    count?: number;
+    until?: string;
+  };
   status: 'Scheduled' | 'Completed' | 'Cancelled';
   createdAt: string;
   updatedAt: string;

@@ -2,17 +2,38 @@ import { Response } from 'express';
 import { Schema } from 'mongoose';
 import Class, { IClass } from '../models/class.model';
 import Child from '../models/child.model';
+import User from '../models/user.model';
 import { AuthRequest } from '../middleware/authMiddleware';
 
 export const createClass = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, ageRange, capacity, description } = req.body;
+    const { name, ageRange, capacity, description, teacher } = req.body;
+
+    if (!name || !ageRange || !capacity) {
+      return res.status(400).json({ message: 'Name, age range and capacity are required' });
+    }
+    if (capacity <= 0) {
+      return res.status(400).json({ message: 'Capacity must be greater than 0' });
+    }
+
+    let teacherId: string | undefined;
+    if (teacher) {
+      const teacherDoc = await User.findById(teacher);
+      if (!teacherDoc || teacherDoc.role !== 'Teacher') {
+        return res.status(400).json({ message: 'Invalid teacher' });
+      }
+      if (!teacherDoc.availability || teacherDoc.availability.length === 0) {
+        return res.status(400).json({ message: 'Teacher has no availability set' });
+      }
+      teacherId = String(teacherDoc._id);
+    }
 
     const newClass = new Class({
       name,
       ageRange,
       capacity,
-      description
+      description,
+      teacher: teacherId
     });
 
     await newClass.save();
@@ -59,6 +80,24 @@ export const updateClass = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+
+    if (updates.capacity) {
+      const currentStudents = await Child.countDocuments({ assignedClass: id });
+      if (updates.capacity < currentStudents) {
+        return res.status(400).json({ message: 'Capacity cannot be less than number of enrolled students' });
+      }
+    }
+
+    if (updates.teacher) {
+      const teacherDoc = await User.findById(updates.teacher);
+      if (!teacherDoc || teacherDoc.role !== 'Teacher') {
+        return res.status(400).json({ message: 'Invalid teacher' });
+      }
+      if (!teacherDoc.availability || teacherDoc.availability.length === 0) {
+        return res.status(400).json({ message: 'Teacher has no availability set' });
+      }
+      updates.teacher = String(teacherDoc._id);
+    }
 
     const updatedClass = await Class.findByIdAndUpdate(id, updates, { new: true });
     
