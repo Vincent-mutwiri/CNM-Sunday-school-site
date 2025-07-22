@@ -20,8 +20,8 @@ export const createEvent = async (req: AuthRequest, res: Response) => {
     const populatedEvent = await Event.findById(event._id)
       .populate('createdBy', 'name role');
 
-    // TODO: Emit socket event for real-time notifications
-    // io.emit('new_announcement', populatedEvent);
+    // Emit socket event for real-time notifications
+    global.io.emit('new_announcement', populatedEvent);
 
     res.status(201).json({ 
       message: 'Event created successfully', 

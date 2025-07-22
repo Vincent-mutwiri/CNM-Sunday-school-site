@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { useAuth } from '@/hooks/useAuth';
+import { useSocket } from '@/hooks/useSocket';
+import { Toaster } from 'sonner';
 import Layout from '@/components/layout/Layout';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
@@ -103,9 +105,12 @@ const AppRoutes: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  useSocket();
+
   return (
     <QueryClientProvider client={queryClient}>
       <AppRoutes />
+      <Toaster richColors position="top-right" />
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
