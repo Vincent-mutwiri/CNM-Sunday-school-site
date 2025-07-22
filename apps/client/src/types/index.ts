@@ -113,3 +113,12 @@ export interface ApiResponse<T = any> {
   error?: string;
 }
 
+export interface Settings {
+  _id: string;
+  siteName: string;
+  siteDescription?: string;
+  defaultUserRole: 'Admin' | 'Teacher' | 'Parent';
+  createdAt: string;
+  updatedAt: string;
+}
+
