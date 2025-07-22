@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, Users, FileText, Plus } from 'lucide-react';
-import { formatDate, formatTime } from '@/lib/utils';
+import { formatDate, formatTime } from '@/lib/dateUtils';
 import { useTeacherDashboard } from '@/hooks/useDashboardData';
 import { useNavigate } from 'react-router-dom';
 

@@ -2,7 +2,43 @@ import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/utils/api';
-import { Class, Schedule, User } from '@/types';
+import type { Class as BaseClass, Schedule as BaseSchedule, User as BaseUser } from '@/types';
+
+// Define response types
+interface ClassesResponse {
+  classes: Class[];
+}
+
+interface UsersResponse {
+  users: User[];
+}
+
+// Define a union type for the possible API response structures
+type ApiResponse<T> = 
+  | T 
+  | { data: T };
+
+interface SchedulesResponse {
+  schedules: Schedule[];
+}
+
+// Extended types to handle both id and _id fields
+type WithId<T> = T & { id?: string; _id?: string };
+
+// Define our local types that extend the base types with both id and _id
+type User = WithId<BaseUser>;
+type Class = WithId<BaseClass>;
+type Schedule = WithId<Omit<BaseSchedule, 'class' | 'teacher'>> & {
+  class: string | Class;
+  teacher: string | User;
+};
+
+// Helper function to safely get ID from any object that might have id or _id
+const safeGetId = (item: { id?: string; _id?: string } | string | undefined): string => {
+  if (!item) return '';
+  if (typeof item === 'string') return item;
+  return item.id || item._id || '';
+};
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,20 +58,27 @@ interface ScheduleFormData {
 }
 
 const Scheduling: React.FC = () => {
-  type ApiResponse = {
-    data: {
-      schedules: Schedule[];
-    };
-  };
-
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery<ApiResponse['data']>({
+  const { data: schedulesResponse, isLoading } = useQuery<SchedulesResponse>({
     queryKey: ['schedules'],
-    queryFn: async (): Promise<ApiResponse['data']> => {
+    queryFn: async (): Promise<SchedulesResponse> => {
       try {
-        const response = await apiClient.get<ApiResponse>('/schedules');
-        return response?.data || { schedules: [] };
+        const response = await apiClient.get<ApiResponse<{ schedules: Schedule[] }>>('/schedules');
+        
+        // Handle { data: { schedules: [...] } } structure
+        if (response && 'data' in response) {
+          return { schedules: response.data?.schedules || [] };
+        }
+        
+        // Handle { schedules: [...] } structure
+        if (response && 'schedules' in response) {
+          return { schedules: response.schedules };
+        }
+        
+        // If we get here, the response doesn't match expected formats
+        console.warn('Unexpected API response format:', response);
+        return { schedules: [] };
       } catch (error) {
         console.error('Error fetching schedules:', error);
         return { schedules: [] };
@@ -43,49 +86,89 @@ const Scheduling: React.FC = () => {
     }
   });
 
-  const { data: classData } = useQuery<{ data: { classes: Class[] } }>({
+  // Response types are now defined at the top level
+
+  const { data: classData } = useQuery<ClassesResponse>({
     queryKey: ['classes'],
-    queryFn: async () => {
+    queryFn: async (): Promise<ClassesResponse> => {
       try {
-        return await apiClient.get('/classes');
+        const response = await apiClient.get<ApiResponse<{ classes: Class[] }>>('/classes');
+        
+        // Handle different response structures
+        if (Array.isArray(response)) {
+          return { classes: response };
+        }
+        
+        // Handle { data: { classes: [...] } } structure
+        if (response && 'data' in response && response.data) {
+          const data = response.data as any;
+          return { 
+            classes: Array.isArray(data) ? data : 
+                    data?.classes || [] 
+          };
+        }
+        
+        // Handle { classes: [...] } structure
+        if (response && 'classes' in response) {
+          return { classes: response.classes };
+        }
+        
+        return { classes: [] };
       } catch (error) {
         console.error('Error fetching classes:', error);
-        return { data: { classes: [] } };
+        return { classes: [] };
       }
     }
   });
 
-  const { data: userData } = useQuery<{ data: { users: User[] } }>({
+  const { data: userData } = useQuery<UsersResponse>({
     queryKey: ['teachers'],
-    queryFn: async () => {
+    queryFn: async (): Promise<UsersResponse> => {
       try {
-        return await apiClient.get('/users');
+        const response = await apiClient.get<ApiResponse<{ users: User[] }>>('/users');
+        
+        // Handle different response structures
+        if (Array.isArray(response)) {
+          return { users: response };
+        }
+        
+        // Handle { data: { users: [...] } } structure
+        if (response && 'data' in response && response.data) {
+          const data = response.data as any;
+          return { 
+            users: Array.isArray(data) ? data : 
+                  data?.users || [] 
+          };
+        }
+        
+        // Handle { users: [...] } structure
+        if (response && 'users' in response) {
+          return { users: response.users };
+        }
+        
+        return { users: [] };
       } catch (error) {
         console.error('Error fetching users:', error);
-        return { data: { users: [] } };
+        return { users: [] };
       }
     }
   });
 
-  const classes = classData?.data.classes ?? [];
-  const teachers = (userData?.data.users ?? []).filter(u => u.role === 'Teacher');
+  const classes = classData?.classes || [];
+  const teachers = (userData?.users || []).filter((u) => u.role === 'Teacher');
 
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
 
   const { register, handleSubmit, setValue, reset, watch } = useForm<ScheduleFormData>({
     defaultValues: { classId: '', teacherId: '', date: '' }
   });
-  const selectedClass = watch('classId');
-  const selectedTeacher = watch('teacherId');
+  const selectedClass: string = watch('classId') || '';
+  const selectedTeacher: string = watch('teacherId') || '';
 
   useEffect(() => {
     if (editingSchedule) {
-      const cls = typeof editingSchedule.class === 'string'
-        ? editingSchedule.class
-        : (editingSchedule.class as Class)._id;
-      const teacher = typeof editingSchedule.teacher === 'string'
-        ? editingSchedule.teacher
-        : (editingSchedule.teacher as User)._id;
+      const cls = safeGetId(editingSchedule.class);
+      const teacher = safeGetId(editingSchedule.teacher);
       reset({
         classId: cls,
         teacherId: teacher,
@@ -142,7 +225,7 @@ const Scheduling: React.FC = () => {
     return <div>Loading schedules...</div>;
   }
 
-  const schedules = data?.schedules ?? [];
+  const schedules = schedulesResponse?.schedules || [];
 
   return (
     <div className="space-y-6">
@@ -164,7 +247,10 @@ const Scheduling: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {classes.map((cls) => (
-                    <SelectItem key={cls._id} value={cls._id}>
+                    <SelectItem 
+                      key={cls._id || ''} 
+                      value={cls._id || ''}
+                    >
                       {cls.name}
                     </SelectItem>
                   ))}
@@ -183,7 +269,10 @@ const Scheduling: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {teachers.map((t) => (
-                    <SelectItem key={t._id} value={t._id}>
+                    <SelectItem 
+                      key={t._id || ''} 
+                      value={t._id || ''}
+                    >
                       {t.name}
                     </SelectItem>
                   ))}
@@ -229,7 +318,7 @@ const Scheduling: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {schedules.map((schedule) => (
+              {schedules.map((schedule: Schedule) => (
                 <tr key={schedule._id}>
                   <td className="px-4 py-2">{(schedule.class as any).name}</td>
                   <td className="px-4 py-2">{(schedule.teacher as any).name}</td>

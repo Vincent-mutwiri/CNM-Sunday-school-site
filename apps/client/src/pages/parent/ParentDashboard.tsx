@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Baby, Calendar, BookOpen, Camera } from 'lucide-react';
-import { calculateAge } from '@/lib/utils';
+import { calculateAge } from '@/lib/dateUtils';
 import { useParentDashboard } from '@/hooks/useDashboardData';
 
 const ParentDashboard: React.FC = () => {
