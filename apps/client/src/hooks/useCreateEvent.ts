@@ -14,7 +14,7 @@ export const useCreateEvent = () => {
   
   return useMutation<Event, Error, CreateEventInput>({
     mutationFn: async (eventData) => {
-      const response = await apiClient.post('/events', eventData);
+      const response = await apiClient.post<{ data: Event }>('/events', eventData);
       return response.data;
     },
     onSuccess: () => {

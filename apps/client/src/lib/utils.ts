@@ -1,35 +1,34 @@
-import { type ClassValue, clsx } from "clsx"
+import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const formatDate = (date: string | Date) => {
+type DateValue = string | number | Date;
+
+/**
+ * Formats a date string into a readable format
+ * @param date - The date to format (can be string, number, or Date object)
+ * @returns Formatted date string (e.g., "January 1, 2023")
+ */
+export function formatDate(date: DateValue): string {
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
-    day: 'numeric'
+    day: 'numeric',
   });
-};
+}
 
-export const formatTime = (date: string | Date) => {
-  return new Date(date).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit'
+/**
+ * Formats a time string into a 12-hour format with AM/PM
+ * @param time - The time to format (can be string, number, or Date object)
+ * @returns Formatted time string (e.g., "2:30 PM")
+ */
+export function formatTime(time: DateValue): string {
+  return new Date(time).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
   });
-};
-
-export const calculateAge = (dateOfBirth: string | Date) => {
-  const today = new Date();
-  const birthDate = new Date(dateOfBirth);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  
-  return age;
-};
-
+}

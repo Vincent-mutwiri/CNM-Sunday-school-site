@@ -40,6 +40,7 @@ export interface Class {
   ageRange: string;
   capacity: number;
   description?: string;
+  teacher?: string | { id: string; name: string };
   createdAt: string;
   updatedAt: string;
 }
