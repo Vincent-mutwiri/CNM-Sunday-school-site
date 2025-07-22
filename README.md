@@ -88,13 +88,13 @@ Adjust the values to match your server configuration when deploying.
 
 ## Running Tests
 
-Workspace packages can expose a `test` script. Run the tests from the repository root with:
+Workspace packages expose a `test` script powered by [Vitest](https://vitest.dev/). Run the test suite from the repository root with:
 
 ```bash
-pnpm test
+pnpm exec vitest run
 ```
 
-The current packages do not include automated tests yet, so this command will simply display the default placeholder message until tests are added.
+The project contains unit tests for hooks and integration tests for the login flow. The above command runs all tests once and exits.
 
 ## Useful Commands
 
