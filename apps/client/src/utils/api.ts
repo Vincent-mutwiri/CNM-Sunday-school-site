@@ -14,13 +14,16 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
-    const token = useAuthStore.getState().token;
+    const authState = useAuthStore.getState();
+    const token = authState.token;
 
     console.log('API Request:', {
       url,
       method: options.method || 'GET',
       hasToken: !!token,
-      endpoint
+      endpoint,
+      isAuthenticated: authState.isAuthenticated,
+      user: authState.user ? { _id: authState.user._id, role: authState.user.role } : 'No user'
     });
 
     const config: RequestInit = {

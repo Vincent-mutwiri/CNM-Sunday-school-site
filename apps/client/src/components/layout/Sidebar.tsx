@@ -23,8 +23,13 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const location = useLocation();
+  
+  console.log('Sidebar - User role:', user?.role);
+  console.log('Current path:', location.pathname);
 
   const getNavigationItems = () => {
+    console.log('getNavigationItems - User role:', user?.role);
+    
     const baseItems = [
       { name: 'Dashboard', href: '/dashboard', icon: Home },
       { name: 'Resources', href: '/resources', icon: FileText },
@@ -32,7 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     ];
 
     if (user?.role === 'Admin') {
-      return [
+      const adminItems = [
         ...baseItems,
         { name: 'User Management', href: '/admin/users', icon: Users },
         { name: 'Class Management', href: '/admin/classes', icon: GraduationCap },
@@ -40,28 +45,38 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         { name: 'Events', href: '/admin/events', icon: Calendar },
         { name: 'Resource Moderation', href: '/admin/resources', icon: FileText },
         { name: 'Gallery Moderation', href: '/admin/gallery', icon: Camera },
+        { name: 'Attendance', href: '/admin/attendance', icon: CheckSquare },
         { name: 'Settings', href: '/admin/settings', icon: Settings },
       ];
+      
+      console.log('Returning Admin navigation items:', adminItems.map(i => i.name));
+      return adminItems;
     }
 
     if (user?.role === 'Teacher') {
-      return [
+      const teacherItems = [
         ...baseItems,
         { name: 'My Classes', href: '/teacher/classes', icon: GraduationCap },
         { name: 'Attendance', href: '/teacher/attendance', icon: CheckSquare },
         { name: 'Resources', href: '/teacher/resources', icon: FileText },
         { name: 'Gallery Upload', href: '/teacher/gallery', icon: Camera },
       ];
+      
+      console.log('Returning Teacher navigation items:', teacherItems.map(i => i.name));
+      return teacherItems;
     }
 
     if (user?.role === 'Parent') {
-      return [
+      const parentItems = [
         ...baseItems,
         { name: 'My Children', href: '/parent/children', icon: Baby },
         { name: 'Attendance', href: '/parent/attendance', icon: CheckSquare },
         { name: 'Resources', href: '/parent/resources', icon: BookOpen },
         { name: 'Gallery', href: '/parent/gallery', icon: Camera },
       ];
+      
+      console.log('Returning Parent navigation items:', parentItems.map(i => i.name));
+      return parentItems;
     }
 
     return baseItems;

@@ -1,0 +1,196 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGODB_URI")
+}
+
+model User {
+  id                  String              @id @default(auto()) @map("_id") @db.ObjectId
+  name                String?
+  email               String?             @unique
+  emailVerified       DateTime?           @map("emailVerified")
+  image               String?
+  role                String              @default("USER")
+  familyId            String?             @map("familyId") @db.ObjectId
+  familyAsParentId    String?             @map("familyAsParentId") @db.ObjectId
+  
+  // Authentication
+  accounts            Account[]
+  sessions            Session[]
+  
+  // Attendance
+  markedAttendances   Attendance[]        @relation("MarkedAttendances")
+  childAttendances    Attendance[]        @relation("ChildAttendances")
+  
+  // Schedules
+  teachingSchedules   Schedule[]          @relation("TeacherSchedules")
+  attendingSchedules  ScheduleAttendee[]
+  
+  // Classes
+  studentClasses      ClassStudent[]
+  teachingClasses     ClassTeacher[]
+  
+  // Family
+  familyAsChild       Family?             @relation("FamilyChildren", fields: [familyId], references: [id])
+  familyAsParent      Family?             @relation("FamilyParents", fields: [familyAsParentId], references: [id])
+  
+  // Timestamps
+  createdAt           DateTime            @default(now()) @map("createdAt") @db.Date
+  updatedAt           DateTime            @updatedAt @map("updatedAt") @db.Date
+
+  @@map("users")
+}
+
+model Account {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String   @map("userId") @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String   @map("providerAccountId")
+  refresh_token     String?  @db.String
+  access_token      String?  @db.String
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.String
+  session_state     String?
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique @map("sessionToken")
+  userId       String   @map("userId") @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verificationTokens")
+}
+
+model Attendance {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  status     String
+  notes      String?
+  
+  // Relationships
+  childId    String   @map("childId") @db.ObjectId
+  scheduleId String   @map("scheduleId") @db.ObjectId
+  markedById String   @map("markedById") @db.ObjectId
+  
+  // Data
+  date       DateTime @default(now())
+  
+  // Relations
+  child      User     @relation("ChildAttendances", fields: [childId], references: [id])
+  schedule   Schedule @relation(fields: [scheduleId], references: [id])
+  markedBy   User     @relation("MarkedAttendances", fields: [markedById], references: [id])
+  
+  // Timestamps
+  createdAt  DateTime @default(now()) @map("createdAt") @db.Date
+  updatedAt  DateTime @updatedAt @map("updatedAt") @db.Date
+
+  @@map("attendances")
+}
+
+model Schedule {
+  id           String              @id @default(auto()) @map("_id") @db.ObjectId
+  date         DateTime
+  startTime    String              @map("startTime")
+  endTime      String              @map("endTime")
+  
+  // Class relationship
+  classId      String              @map("classId") @db.ObjectId
+  class        Class               @relation(fields: [classId], references: [id])
+  
+  // Teacher relationship
+  teacherId    String              @map("teacherId") @db.ObjectId
+  teacher      User                @relation("TeacherSchedules", fields: [teacherId], references: [id])
+  
+  // Attendees and attendance
+  attendees    ScheduleAttendee[]
+  attendances  Attendance[]
+  
+  // Timestamps
+  createdAt    DateTime            @default(now()) @map("createdAt") @db.Date
+  updatedAt    DateTime            @updatedAt @map("updatedAt") @db.Date
+
+  @@map("schedules")
+}
+
+model ScheduleAttendee {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  schedule   Schedule @relation(fields: [scheduleId], references: [id])
+  scheduleId String   @map("scheduleId") @db.ObjectId
+  student    User     @relation(fields: [studentId], references: [id])
+  studentId  String   @map("studentId") @db.ObjectId
+  attended   Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("createdAt") @db.Date
+
+  @@unique([scheduleId, studentId])
+  @@map("schedule_attendees")
+}
+
+model Class {
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  ageRange  String     @map("ageRange")
+  schedules Schedule[]
+  students  ClassStudent[]
+  teachers  ClassTeacher[]
+
+  @@map("classes")
+}
+
+model ClassStudent {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  class     Class    @relation(fields: [classId], references: [id])
+  classId   String   @map("classId") @db.ObjectId
+  student   User     @relation(fields: [studentId], references: [id])
+  studentId String   @map("studentId") @db.ObjectId
+  createdAt DateTime @default(now()) @map("createdAt") @db.Date
+
+  @@unique([classId, studentId])
+  @@map("class_students")
+}
+
+model ClassTeacher {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  class     Class    @relation(fields: [classId], references: [id])
+  classId   String   @map("classId") @db.ObjectId
+  teacher   User     @relation(fields: [teacherId], references: [id])
+  teacherId String   @map("teacherId") @db.ObjectId
+  createdAt DateTime @default(now()) @map("createdAt") @db.Date
+
+  @@unique([classId, teacherId])
+  @@map("class_teachers")
+}
+
+model Family {
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  name     String
+  children User[]  @relation("FamilyChildren")
+  parents  User[]  @relation("FamilyParents")
+  createdAt DateTime @default(now()) @map("createdAt") @db.Date
+  updatedAt DateTime @updatedAt @map("updatedAt") @db.Date
+
+  @@map("families")
+}
