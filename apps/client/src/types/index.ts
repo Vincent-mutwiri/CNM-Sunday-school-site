@@ -41,11 +41,7 @@ export interface Class {
   ageRange: string;
   capacity: number;
   description?: string;
-<<<<<<< HEAD
-  teacher?: string | { id: string; name: string };
-=======
   teacher?: string | User;
->>>>>>> d0ac758 (Admin: ixed the table layout in the Class Management section to show teacher section)
   createdAt: string;
   updatedAt: string;
 }
