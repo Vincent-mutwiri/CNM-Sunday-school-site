@@ -108,3 +108,18 @@ export const updateResourceStatus = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const getTeacherResources = async (req: AuthRequest, res: Response) => {
+  try {
+    const teacherId = req.user!._id;
+    
+    const resources = await Resource.find({ uploadedBy: teacherId })
+      .sort({ createdAt: -1 })
+      .populate('uploadedBy', 'name')
+      .populate('approvedBy', 'name');
+
+    res.json({ resources });
+  } catch (error) {
+    console.error('Get teacher resources error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

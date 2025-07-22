@@ -27,8 +27,8 @@ const useTeacherDashboard = () => {
       // In a real app, this would be a single API endpoint that aggregates data
       const [schedulesRes, classesRes, resourcesRes, eventsRes] = await Promise.all([
         apiClient.get<{ schedules: PopulatedSchedule[] }>('/schedules/teacher/me'),
-        apiClient.get<{ classes: Class[] }>('/classes/teacher/me'),
-        apiClient.get<{ resources: Resource[] }>('/resources/teacher/me'),
+        apiClient.get<{ classes: Class[] }>('/classes/teacher/classes'),
+        apiClient.get<{ resources: Resource[] }>('/resources/teacher/resources'),
         apiClient.get<{ events: Event[] }>('/events'),
       ]);
       return {

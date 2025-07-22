@@ -5,7 +5,8 @@ import {
   uploadResource, 
   getApprovedResources, 
   getPendingResources, 
-  updateResourceStatus 
+  updateResourceStatus,
+  getTeacherResources
 } from '../controllers/resourceController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { checkRole } from '../middleware/roleMiddleware';
@@ -41,6 +42,7 @@ const upload = multer({
 
 // Teacher routes
 router.post('/upload', authMiddleware, checkRole(['Teacher']), upload.single('file'), uploadResource);
+router.get('/teacher/resources', authMiddleware, checkRole(['Teacher']), getTeacherResources);
 
 // Authenticated routes
 router.get('/', authMiddleware, getApprovedResources);
