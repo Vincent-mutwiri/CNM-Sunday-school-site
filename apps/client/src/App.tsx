@@ -17,6 +17,7 @@ import ResourceModeration from '@/pages/admin/ResourceModeration';
 import GalleryModeration from '@/pages/admin/GalleryModeration';
 import AdminEvents from '@/pages/admin/AdminEvents';
 import AdminSettings from '@/pages/admin/AdminSettings';
+import AdminAttendance from '@/pages/admin/AdminAttendance';
 import Gallery from '@/pages/Gallery';
 import ResourceLibrary from '@/pages/ResourceLibrary';
 import TeacherResources from '@/pages/teacher/TeacherResources';
@@ -80,6 +81,7 @@ const AppRoutes: React.FC = () => {
           <Route path="admin/events" element={<AdminEvents />} />
           <Route path="admin/resources" element={<ResourceModeration />} />
           <Route path="admin/gallery" element={<GalleryModeration />} />
+          <Route path="admin/attendance" element={<AdminAttendance />} />
           <Route path="admin/settings" element={<AdminSettings />} />
 
           {/* Teacher routes */}
