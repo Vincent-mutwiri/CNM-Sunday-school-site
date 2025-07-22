@@ -12,6 +12,7 @@ import ClassManagement from '@/pages/admin/ClassManagement';
 import Scheduling from '@/pages/admin/Scheduling';
 import ResourceModeration from '@/pages/admin/ResourceModeration';
 import GalleryModeration from '@/pages/admin/GalleryModeration';
+import AdminEvents from '@/pages/admin/AdminEvents';
 import AdminSettings from '@/pages/admin/AdminSettings';
 import Gallery from '@/pages/Gallery';
 import ResourceLibrary from '@/pages/ResourceLibrary';
@@ -72,6 +73,7 @@ const AppRoutes: React.FC = () => {
           <Route path="admin/users" element={<UserManagement />} />
           <Route path="admin/classes" element={<ClassManagement />} />
           <Route path="admin/schedules" element={<Scheduling />} />
+          <Route path="admin/events" element={<AdminEvents />} />
           <Route path="admin/resources" element={<ResourceModeration />} />
           <Route path="admin/gallery" element={<GalleryModeration />} />
           <Route path="admin/settings" element={<AdminSettings />} />
