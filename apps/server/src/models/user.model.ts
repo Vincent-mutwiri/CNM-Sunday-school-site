@@ -7,6 +7,7 @@ export interface IUser extends Document {
   role: 'Admin' | 'Teacher' | 'Parent';
   children?: Schema.Types.ObjectId[];
   profilePictureUrl: string;
+  availability: string[];
 }
 
 const userSchema = new Schema<IUser>({
@@ -16,6 +17,7 @@ const userSchema = new Schema<IUser>({
   role: { type: String, enum: ['Admin', 'Teacher', 'Parent'], default: 'Parent' },
   children: [{ type: Schema.Types.ObjectId, ref: 'Child' }],
   profilePictureUrl: { type: String, default: 'default-avatar-url' },
+  availability: { type: [String], default: [] },
 }, { timestamps: true });
 
 const User = model<IUser>('User', userSchema);

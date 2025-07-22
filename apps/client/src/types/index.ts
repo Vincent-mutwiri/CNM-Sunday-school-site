@@ -5,6 +5,7 @@ export interface User {
   role: 'Admin' | 'Teacher' | 'Parent';
   password?: string;
   profilePictureUrl: string;
+  availability?: string[];
   children?: string[] | Child[];
   createdAt: string;
   updatedAt: string;
@@ -42,6 +43,7 @@ export interface Class {
   capacity: number;
   description?: string;
   teacher?: string | User;
+  archived?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -57,6 +59,7 @@ export interface Schedule {
   className?: string; // For display purposes when populated
   teacher: string | User;
   students: string[] | Child[];
+  room?: string;
   status: 'Scheduled' | 'Completed' | 'Cancelled';
   createdAt: string;
   updatedAt: string;

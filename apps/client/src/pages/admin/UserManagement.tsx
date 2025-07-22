@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
 import { format } from 'date-fns';
 import { Loader2, Trash2, User as UserIcon, X, Users } from 'lucide-react';
 import { toast } from 'sonner';
@@ -8,6 +9,8 @@ import { apiClient } from '@/utils/api';
 import { User } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -109,6 +112,38 @@ const UserManagement: React.FC = () => {
   });
 
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+
+  const { register, handleSubmit, reset } = useForm<{ name: string; email: string; password: string; role: User['role']; profilePictureUrl?: string }>();
+
+  const createUserMutation = useMutation({
+    mutationFn: async (data: { name: string; email: string; password: string; role: User['role'] }) => {
+      return apiClient.post('/users', data);
+    },
+    onSuccess: () => {
+      toast.success('User created');
+      reset();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
+    }
+  });
+
+  const bulkUploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiClient.uploadFile('/users/bulk', formData);
+    },
+    onSuccess: () => {
+      toast.success('Bulk upload complete');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      setCsvFile(null);
+    },
+    onError: (err: Error) => toast.error(err.message)
+  });
+
+  const [csvFile, setCsvFile] = useState<File | null>(null);
 
   if (isLoading) {
     return (
@@ -256,6 +291,66 @@ const UserManagement: React.FC = () => {
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Create New User</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit(data => createUserMutation.mutate(data))} className="space-y-4">
+            <div>
+              <Label htmlFor="name">Name</Label>
+              <Input id="name" {...register('name', { required: true })} />
+            </div>
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" {...register('email', { required: true })} />
+            </div>
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" type="password" {...register('password', { required: true })} />
+            </div>
+            <div>
+              <Label htmlFor="profilePictureUrl">Profile Picture URL</Label>
+              <Input id="profilePictureUrl" {...register('profilePictureUrl')} />
+            </div>
+            <div>
+              <Label htmlFor="role">Role</Label>
+              <Select onValueChange={(v: User['role']) => {
+                register('role').onChange({ target: { value: v } } as any);
+              }} defaultValue="Parent">
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Admin">Admin</SelectItem>
+                  <SelectItem value="Teacher">Teacher</SelectItem>
+                  <SelectItem value="Parent">Parent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit" disabled={createUserMutation.isPending}>
+              {createUserMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create User'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Bulk Upload CSV</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Input type="file" accept=".csv" onChange={e => setCsvFile(e.target.files?.[0] || null)} />
+          <Button
+            type="button"
+            onClick={() => csvFile && bulkUploadMutation.mutate(csvFile)}
+            disabled={!csvFile || bulkUploadMutation.isPending}
+          >
+            {bulkUploadMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Upload'}
+          </Button>
         </CardContent>
       </Card>
     </div>
