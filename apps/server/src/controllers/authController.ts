@@ -35,7 +35,7 @@ export const register = async (req: Request, res: Response) => {
       message: 'User registered successfully',
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -71,7 +71,7 @@ export const login = async (req: Request, res: Response) => {
       message: 'Login successful',
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -89,7 +89,7 @@ export const getMe = async (req: AuthRequest, res: Response) => {
     const user = await User.findById(req.user!._id).populate('children');
     res.json({
       user: {
-        id: user!._id,
+        _id: user!._id,
         name: user!.name,
         email: user!.email,
         role: user!.role,

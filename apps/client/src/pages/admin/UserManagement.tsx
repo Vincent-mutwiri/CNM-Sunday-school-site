@@ -31,12 +31,8 @@ const UserManagement: React.FC = () => {
         console.log('Fetching users from /users endpoint...');
         const response = await apiClient.get<UsersResponse>('/users');
         console.log('Users API response:', response);
-        // Ensure all users have _id
-        const users = response.users.map(user => ({
-          ...user,
-          _id: (user as any)._id || (user as any).id // Handle both _id and id for backward compatibility
-        }));
-        return { users };
+        // Users already contain _id from the API
+        return { users: response.users };
       } catch (err) {
         console.error('Error in users query:', err);
         toast.error('Failed to load users');
