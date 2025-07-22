@@ -37,6 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         { name: 'User Management', href: '/admin/users', icon: Users },
         { name: 'Class Management', href: '/admin/classes', icon: GraduationCap },
         { name: 'Scheduling', href: '/admin/schedules', icon: Calendar },
+        { name: 'Events', href: '/admin/events', icon: Calendar },
         { name: 'Resource Moderation', href: '/admin/resources', icon: FileText },
         { name: 'Gallery Moderation', href: '/admin/gallery', icon: Camera },
         { name: 'Settings', href: '/admin/settings', icon: Settings },
