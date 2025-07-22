@@ -411,7 +411,7 @@ const ClassManagement: React.FC = () => {
     },
   });
 
-  const { mutate: archiveClass, isPending: isArchiving } = useMutation({
+  const { mutate: archiveClass } = useMutation({
     mutationFn: (id: string) => apiClient.put(`/classes/${id}/archive`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });

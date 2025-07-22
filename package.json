@@ -12,8 +12,11 @@
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-popover": "^1.1.14",
+    "@types/uuid": "^10.0.0",
+    "csv-parse": "^6.1.0",
     "date-fns": "^4.1.0",
-    "react-day-picker": "^9.8.0"
+    "react-day-picker": "^9.8.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.1.5",

@@ -9,7 +9,7 @@ import { connectDB } from './utils/database';
 
 // Import routes
 import authRoutes from './routes/authRoutes';
-import userRoutes from './routes/userRoutes';
+import userRoutes from './routes/user.routes';
 import childRoutes from './routes/childRoutes';
 import classRoutes from './routes/classRoutes';
 import scheduleRoutes from './routes/scheduleRoutes';
@@ -18,6 +18,7 @@ import resourceRoutes from './routes/resourceRoutes';
 import eventRoutes from './routes/eventRoutes';
 import galleryRoutes from './routes/galleryRoutes';
 import settingsRoutes from './routes/settingsRoutes';
+import { errorHandler } from './utils/errors';
 
 // Load environment variables
 dotenv.config();
@@ -62,7 +63,7 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files (uploads)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Routes
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/children', childRoutes);
@@ -76,8 +77,20 @@ app.use('/api/settings', settingsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ message: 'Sunday School Management System API is running!' });
+  res.status(200).json({ status: 'ok' });
 });
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ 
+    success: false,
+    message: 'Not Found',
+    error: `Cannot ${req.method} ${req.originalUrl}`
+  });
+});
+
+// Global error handler
+app.use(errorHandler);
 
 // Socket.io connection handling
 io.on('connection', (socket) => {
