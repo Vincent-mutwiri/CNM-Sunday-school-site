@@ -12,7 +12,8 @@ export const createEvent = async (req: AuthRequest, res: Response) => {
       type,
       description,
       date: new Date(date),
-      createdBy
+      createdBy,
+      status: 'Sent'
     });
 
     await event.save();
@@ -29,6 +30,36 @@ export const createEvent = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error('Create event error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const scheduleEvent = async (req: AuthRequest, res: Response) => {
+  try {
+    const { title, type, description, date, scheduledFor } = req.body;
+    const createdBy = req.user!._id;
+
+    const event = new Event({
+      title,
+      type,
+      description,
+      date: new Date(date),
+      scheduledFor: new Date(scheduledFor),
+      createdBy,
+      status: 'Scheduled'
+    });
+
+    await event.save();
+
+    const populatedEvent = await Event.findById(event._id)
+      .populate('createdBy', 'name role');
+
+    res.status(201).json({
+      message: 'Event scheduled successfully',
+      event: populatedEvent
+    });
+  } catch (error) {
+    console.error('Schedule event error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

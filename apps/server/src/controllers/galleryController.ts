@@ -11,12 +11,11 @@ export const uploadGalleryImage = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'No image uploaded' });
     }
 
-    // In a real application, you would upload to cloud storage (Cloudinary, AWS S3, etc.)
-    // For now, we'll use the local file path
-    const imageUrl = `/uploads/${req.file.filename}`;
+    const { path: secure_url, filename: public_id } = req.file as any;
 
     const galleryImage = new GalleryImage({
-      imageUrl,
+      secure_url,
+      public_id,
       caption,
       event: eventId || undefined,
       class: classId || undefined,

@@ -17,6 +17,7 @@ router.use(authMiddleware);
 router.get('/me', userController.getCurrentUser);
 router.put('/me/profile', userController.updateUserProfile);
 router.post('/me/availability', userController.updateMyAvailability);
+router.post('/me/push-token', userController.registerPushToken);
 
 // Profile picture upload route with proper middleware typing
 const [uploadMiddleware, uploadHandler] = userController.uploadProfilePictureHandler;
