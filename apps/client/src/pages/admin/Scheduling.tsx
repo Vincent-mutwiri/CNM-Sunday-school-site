@@ -315,7 +315,7 @@ const Scheduling: React.FC = () => {
 
   // Fetch Teachers
   const { data: teachersResponse, isLoading: isLoadingTeachers } = useQuery<{ users: User[] }>({
-    queryKey: ['users', { role: 'Teacher' }], // More specific query key
+    queryKey: ['teachers'], // Stable query key avoids re-fetching on each render
     queryFn: () => apiClient.get('/users/teachers'),
   });
 
