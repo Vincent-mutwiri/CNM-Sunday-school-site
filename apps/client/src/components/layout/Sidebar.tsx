@@ -12,7 +12,10 @@ import {
   Camera, 
   Settings,
   Baby,
-  BookOpen
+  BookOpen,
+  MessageCircle,
+  Handshake,
+  Star
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -58,6 +61,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         ...baseItems,
         { name: 'My Classes', href: '/teacher/classes', icon: GraduationCap },
         { name: 'Attendance', href: '/teacher/attendance', icon: CheckSquare },
+        { name: 'Gradebook', href: '/teacher/gradebook', icon: FileText },
+        { name: 'Lesson Planner', href: '/teacher/lesson-planner', icon: BookOpen },
         { name: 'Resources', href: '/teacher/resources', icon: FileText },
         { name: 'Gallery Upload', href: '/teacher/gallery', icon: Camera },
       ];
@@ -73,6 +78,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         { name: 'Attendance', href: '/parent/attendance', icon: CheckSquare },
         { name: 'Resources', href: '/parent/resources', icon: BookOpen },
         { name: 'Gallery', href: '/parent/gallery', icon: Camera },
+        { name: 'Messages', href: '/parent/messages', icon: MessageCircle },
+        { name: 'Volunteer', href: '/parent/volunteer', icon: Handshake },
+        { name: 'Feedback', href: '/parent/feedback', icon: Star },
       ];
       
       console.log('Returning Parent navigation items:', parentItems.map(i => i.name));
@@ -86,7 +94,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Mobile overlay */
+}
       {isOpen && (
         <div
           className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"

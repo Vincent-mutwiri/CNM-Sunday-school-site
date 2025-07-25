@@ -23,14 +23,20 @@ import ResourceLibrary from '@/pages/ResourceLibrary';
 import TeacherResources from '@/pages/teacher/TeacherResources';
 import GalleryUpload from '@/pages/teacher/GalleryUpload';
 import TeacherClasses from '@/pages/teacher/TeacherClasses';
+import ClassRosterView from '@/pages/teacher/ClassRosterView';
 import AttendanceMarking from '@/pages/teacher/AttendanceMarking';
 import TeacherAvailability from '@/pages/teacher/TeacherAvailability';
 import { CreateEventPage } from '@/pages/teacher/CreateEventPage';
 import { EventsList } from '@/pages/teacher/EventsList';
+import Gradebook from '@/pages/teacher/Gradebook';
+import LessonPlanner from '@/pages/teacher/LessonPlanner';
 import Children from '@/pages/parent/Children';
 import Attendance from '@/pages/parent/Attendance';
 import ParentResources from '@/pages/parent/ParentResources';
 import ParentGallery from '@/pages/parent/ParentGallery';
+import MessagingView from '@/pages/parent/MessagingView';
+import VolunteerPage from '@/pages/parent/VolunteerPage';
+import FeedbackForm from '@/pages/parent/FeedbackForm';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -86,12 +92,15 @@ const AppRoutes: React.FC = () => {
 
           {/* Teacher routes */}
           <Route path="teacher/classes" element={<TeacherClasses />} />
+          <Route path="teacher/classes/:classId" element={<ClassRosterView />} />
           <Route path="teacher/attendance" element={<AttendanceMarking />} />
           <Route path="teacher/events" element={<EventsList />} />
           <Route path="teacher/events/new" element={<CreateEventPage />} />
           <Route path="teacher/resources" element={<TeacherResources />} />
           <Route path="teacher/availability" element={<TeacherAvailability />} />
           <Route path="teacher/gallery" element={<GalleryUpload />} />
+          <Route path="teacher/gradebook" element={<Gradebook />} />
+          <Route path="teacher/lesson-planner" element={<LessonPlanner />} />
 
           {/* Parent routes */}
           <Route path="parent/children" element={<Children />} />
@@ -99,6 +108,9 @@ const AppRoutes: React.FC = () => {
           <Route path="parent/attendance/:childId" element={<Attendance />} />
           <Route path="parent/resources" element={<ParentResources />} />
           <Route path="parent/gallery" element={<ParentGallery />} />
+          <Route path="parent/messages" element={<MessagingView />} />
+          <Route path="parent/volunteer" element={<VolunteerPage />} />
+          <Route path="parent/feedback" element={<FeedbackForm />} />
 
           {/* Shared pages */}
           <Route path="resources" element={<ResourceLibrary />} />

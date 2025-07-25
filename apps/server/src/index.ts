@@ -18,15 +18,25 @@ import resourceRoutes from './routes/resourceRoutes';
 import eventRoutes from './routes/eventRoutes';
 import galleryRoutes from './routes/galleryRoutes';
 import settingsRoutes from './routes/settingsRoutes';
+// New routes
+import gradeRoutes from './routes/gradeRoutes';
+import appointmentRoutes from './routes/appointmentRoutes';
+import communicationRoutes from './routes/communicationRoutes';
+import volunteerRoutes from './routes/volunteerRoutes';
+import feedbackRoutes from './routes/feedbackRoutes';
+import dashboardRoutes from './routes/dashboardRoutes';
 import { errorHandler } from './utils/errors';
 
 // Load environment variables
 dotenv.config();
 
 // CORS configuration
+const isDevelopment = process.env.NODE_ENV !== 'production';
 const allowedOrigins = [
   'http://localhost:5173', // Vite dev server
-  'http://localhost:3000', // Production client
+  'http://127.0.0.1:5173', // Vite dev server (alternative)
+  'http://localhost:3000', // Common React dev server
+  'http://127.0.0.1:3000', // Common React dev server (alternative)
   process.env.CLIENT_URL   // Environment variable for production
 ].filter((origin): origin is string => Boolean(origin)); // Remove any undefined values and ensure string[] type
 
@@ -42,21 +52,43 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, postman)
-    if (!origin) return callback(null, true);
+// CORS middleware configuration
+app.use((req, res, next) => {
+  // Get the origin of the request
+  const origin = req.headers.origin;
+  
+  // In development, allow all origins for easier development
+  if (isDevelopment) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
     
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
     }
-    return callback(null, true);
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
+    return next();
+  }
+  
+  // In production, use the strict CORS policy
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+  } else if (origin) {
+    // Origin not allowed
+    return res.status(403).json({ error: 'Not allowed by CORS' });
+  }
+  
+  next();
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -74,6 +106,13 @@ app.use('/api/resources', resourceRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/gallery', galleryRoutes);
 app.use('/api/settings', settingsRoutes);
+// New routes
+app.use('/api/grades', gradeRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/communications', communicationRoutes);
+app.use('/api/volunteer-slots', volunteerRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -117,7 +156,7 @@ const startServer = async () => {
   try {
     console.log('🚀 Starting Sunday School Management System Server...');
     console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔌 Connecting to database...`);
+    console.log('🔌 Connecting to database...');
     
     await connectDB();
     

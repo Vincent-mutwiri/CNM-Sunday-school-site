@@ -1,6 +1,7 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
 export interface IUser extends Document {
+  _id: Types.ObjectId;
   name: string;
   email: string;
   password?: string; // Password will be hashed and not selected by default
@@ -13,6 +14,17 @@ export interface IUser extends Document {
   phoneNumber?: string;
   address?: string;
   dateOfBirth?: Date;
+  // Teacher-specific fields
+  qualifications: string[];
+  weeklyAvailability: {
+    monday: string[];
+    tuesday: string[];
+    wednesday: string[];
+    thursday: string[];
+    friday: string[];
+    saturday: string[];
+    sunday: string[];
+  };
   createdAt: Date;
   updatedAt: Date;
   __v?: number;
@@ -69,6 +81,20 @@ const userSchema = new Schema<IUser>({
   availability: { 
     type: [String], 
     default: [] 
+  },
+  // Teacher-specific fields
+  qualifications: { 
+    type: [String], 
+    default: [] 
+  },
+  weeklyAvailability: {
+    monday: { type: [String], default: [] },
+    tuesday: { type: [String], default: [] },
+    wednesday: { type: [String], default: [] },
+    thursday: { type: [String], default: [] },
+    friday: { type: [String], default: [] },
+    saturday: { type: [String], default: [] },
+    sunday: { type: [String], default: [] },
   },
 }, { 
   timestamps: true,
