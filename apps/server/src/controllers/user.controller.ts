@@ -137,6 +137,42 @@ export const updateUserProfile = async (req: AuthRequest, res: Response, next: N
   }
 };
 
+// Update teacher profile (qualifications and availability)
+export const updateTeacherProfile = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { qualifications, weeklyAvailability } = req.body;
+    const userId = req.user?._id;
+
+    // Verify user exists and is a teacher
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    if (user.role !== 'Teacher') {
+      throw new ForbiddenError('Only teachers can update their profile');
+    }
+
+    const updates: any = {};
+    if (qualifications) updates.qualifications = qualifications;
+    if (weeklyAvailability) updates.weeklyAvailability = weeklyAvailability;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      updates,
+      { new: true, runValidators: true }
+    ).select('-password -__v');
+
+    res.json({ 
+      success: true, 
+      message: 'Teacher profile updated successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Delete user
 export const deleteUserHandler = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

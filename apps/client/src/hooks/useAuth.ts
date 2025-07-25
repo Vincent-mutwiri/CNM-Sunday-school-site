@@ -17,6 +17,12 @@ interface RegisterData {
 export const useAuth = () => {
   const { user, token, isAuthenticated, login, logout } = useAuthStore();
   const queryClient = useQueryClient();
+  
+  console.log('useAuth - Current auth state:', {
+    isAuthenticated,
+    user: user ? { id: user._id, role: user.role } : null,
+    hasToken: !!token
+  });
 
   const loginMutation = useMutation<AuthResponse, Error, LoginCredentials>({
     mutationFn: async (credentials: LoginCredentials): Promise<AuthResponse> => {

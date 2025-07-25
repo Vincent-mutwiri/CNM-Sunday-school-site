@@ -20,7 +20,7 @@ export const useTeacherClasses = () => {
     queryKey: ['teacher', 'classes'],
     queryFn: async () => {
       try {
-        return await apiClient.get('/teacher/classes');
+        return await apiClient.get('/classes/teacher/classes');
       } catch (error) {
         if (error instanceof Error && error.message.includes('404')) {
           console.warn('Teacher classes endpoint not found. The backend might not be running or the endpoint is not implemented.');
@@ -42,7 +42,7 @@ export const useMarkAttendance = () => {
       studentId: string;
       status: 'Present' | 'Absent' | 'Late';
       notes?: string;
-    }) => apiClient.post('/attendance/mark', data),
+    }) => apiClient.post('/classes/attendance/mark', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teacher', 'classes'] });
     },

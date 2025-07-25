@@ -5,43 +5,15 @@ import { useQuery } from '@tanstack/react-query';
 // UTILS & TYPES (Assuming these are in your project)
 import { apiClient } from '@/utils/api';
 import { formatDate, formatTime } from '@/lib/utils'; // Using one consistent utils import
-import { Schedule, Class, User, Resource, Event } from '@/types'; // Assuming Event type exists
+import { Schedule, Class, User, Resource, Event, Grade } from '@/types'; // Assuming Event type exists
 
 // SHADCN/UI COMPONENTS
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 // ICONS
-import { Calendar, Users, Plus, BookOpen, Megaphone } from 'lucide-react';
-
-// =================================================================
-// 1. DATA FETCHING HOOK (Mockup of your useTeacherDashboard)
-// =================================================================
-// This hook encapsulates all data fetching for the dashboard.
-type PopulatedSchedule = Schedule & { class: Class; students: User[] };
-
-const useTeacherDashboard = () => {
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['teacherDashboard'],
-    queryFn: async () => {
-      // In a real app, this would be a single API endpoint that aggregates data
-      const [schedulesRes, classesRes, resourcesRes, eventsRes] = await Promise.all([
-        apiClient.get<{ schedules: PopulatedSchedule[] }>('/schedules/teacher/me'),
-        apiClient.get<{ classes: Class[] }>('/classes/teacher/classes'),
-        apiClient.get<{ resources: Resource[] }>('/resources/teacher/resources'),
-        apiClient.get<{ events: Event[] }>('/events'),
-      ]);
-      return {
-        schedules: schedulesRes.schedules || [],
-        classes: classesRes.classes || [],
-        resources: resourcesRes.resources || [],
-        events: eventsRes.events || [],
-      };
-    },
-  });
-
-  return { data, isLoading, isError, error };
-};
+import { Calendar, Users, Plus, BookOpen, Megaphone, FileText } from 'lucide-react';
+import { useTeacherDashboard } from '@/hooks/useDashboardData';
 
 // =================================================================
 // 2. SUB-COMPONENT: Dashboard Skeleton (Loading State)
@@ -110,7 +82,7 @@ const DashboardSkeleton: React.FC = () => (
 // 3. SUB-COMPONENT: Dashboard Cards
 // =================================================================
 
-const UpcomingScheduleCard: React.FC<{ schedules: PopulatedSchedule[] }> = ({ schedules }) => {
+const UpcomingScheduleCard: React.FC<{ schedules: Schedule[] }> = ({ schedules }) => {
   const navigate = useNavigate();
   return (
     <Card>
@@ -128,7 +100,6 @@ const UpcomingScheduleCard: React.FC<{ schedules: PopulatedSchedule[] }> = ({ sc
                   <p className="text-sm text-gray-500">
                     {formatDate(schedule.date)} at {formatTime(schedule.date)}
                   </p>
-                  <p className="text-xs text-gray-400">{schedule.students?.length || 0} students expected</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => navigate(`/teacher/attendance/${schedule._id}`)}>
                   Mark Attendance
@@ -139,6 +110,41 @@ const UpcomingScheduleCard: React.FC<{ schedules: PopulatedSchedule[] }> = ({ sc
             <div className="text-center py-6 text-gray-500">
               <Calendar className="mx-auto h-12 w-12 text-gray-300" />
               <p className="mt-2">You have no upcoming classes scheduled.</p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const RecentGradesCard: React.FC<{ grades: Grade[] }> = ({ grades }) => {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center"><FileText className="mr-2 h-5 w-5 text-purple-500" /> Recent Grades</CardTitle>
+        <CardDescription>Latest grades you've entered for your students.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {grades.length > 0 ? (
+            grades.slice(0, 5).map((grade) => (
+              <div key={grade._id} className="flex items-center justify-between p-3 rounded-md border hover:bg-gray-50">
+                <div>
+                  <p className="font-semibold text-gray-800">{grade.assignmentTitle}</p>
+                  <p className="text-sm text-gray-500">
+                    {grade.student?.name} - {grade.class?.name}
+                  </p>
+                </div>
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                  {grade.grade}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-6 text-gray-500">
+              <FileText className="mx-auto h-12 w-12 text-gray-300" />
+              <p className="mt-2">No grades entered yet.</p>
             </div>
           )}
         </div>
@@ -158,6 +164,7 @@ const QuickActionsCard: React.FC = () => {
         <Button className="w-full justify-start" variant="outline" onClick={() => navigate('/teacher/resources/upload')}><Plus className="mr-2 h-4 w-4" /> Upload a Resource</Button>
         <Button className="w-full justify-start" variant="outline" onClick={() => navigate('/teacher/gallery/upload')}><Plus className="mr-2 h-4 w-4" /> Add Gallery Photos</Button>
         <Button className="w-full justify-start" variant="outline" onClick={() => navigate('/teacher/events/new')}><Plus className="mr-2 h-4 w-4" /> Create an Event</Button>
+        <Button className="w-full justify-start" variant="outline" onClick={() => navigate('/teacher/gradebook')}><Plus className="mr-2 h-4 w-4" /> Gradebook</Button>
       </CardContent>
     </Card>
   );
@@ -220,7 +227,7 @@ const MyClassesCard: React.FC<{ classes: Class[] }> = ({ classes }) => {
 // =================================================================
 
 const TeacherDashboard: React.FC = () => {
-  const { data, isLoading, isError, error } = useTeacherDashboard();
+  const { classes, upcomingSchedules, recentGrades, isLoading, isError, error } = useTeacherDashboard();
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -229,8 +236,6 @@ const TeacherDashboard: React.FC = () => {
   if (isError) {
     return <div className="p-4 text-red-500 bg-red-50 rounded-md">Error loading dashboard: {error?.message}</div>;
   }
-  
-  const { schedules = [], classes = [], events = [] } = data || {};
 
   return (
     <div className="space-y-6">
@@ -238,14 +243,15 @@ const TeacherDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Main Content Column */}
         <div className="lg:col-span-2 space-y-6">
-          <UpcomingScheduleCard schedules={schedules} />
+          <UpcomingScheduleCard schedules={upcomingSchedules} />
           <MyClassesCard classes={classes} />
+          <RecentGradesCard grades={recentGrades} />
         </div>
 
         {/* Sidebar Column */}
         <div className="space-y-6">
           <QuickActionsCard />
-          <AnnouncementsCard events={events} />
+          <AnnouncementsCard events={[]} />
         </div>
       </div>
     </div>

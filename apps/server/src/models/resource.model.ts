@@ -1,13 +1,17 @@
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Document, Types } from 'mongoose';
+import { IUser } from './user.model';
 
 export interface IResource extends Document {
   title: string;
   description?: string;
   type: 'Lesson Plan' | 'Song' | 'Video' | 'Craft';
   fileUrl: string;
-  uploadedBy: Schema.Types.ObjectId;
+  uploadedBy: Types.ObjectId | IUser;
   status: 'Pending' | 'Approved' | 'Rejected';
-  approvedBy?: Schema.Types.ObjectId;
+  approvedBy?: Types.ObjectId | IUser;
+  // Sharing capabilities
+  isShared: boolean;
+  sharedWith: Types.ObjectId[];
 }
 
 const resourceSchema = new Schema<IResource>({
@@ -18,6 +22,9 @@ const resourceSchema = new Schema<IResource>({
   uploadedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
   approvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  // Sharing capabilities
+  isShared: { type: Boolean, default: false },
+  sharedWith: [{ type: Schema.Types.ObjectId, ref: 'User' }],
 }, { timestamps: true });
 
 const Resource = model<IResource>('Resource', resourceSchema);

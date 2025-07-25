@@ -6,12 +6,17 @@
     "strict": true,
     "esModuleInterop": true,
     "jsx": "react-jsx",
-    "types": ["vitest/globals"],
+    "types": ["node", "vitest/globals"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["apps/client/src/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx"],
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.js",
+    "**/*.jsx"
+  ],
   "exclude": ["node_modules", "dist"]
 }

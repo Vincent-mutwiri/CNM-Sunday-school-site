@@ -6,10 +6,13 @@ import { format } from 'date-fns';
 import { Loader2, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 const AttendanceMarking: React.FC = () => {
+  console.log('Rendering AttendanceMarking component');
   const { data, isLoading, error, isError } = useTeacherClasses();
   const { mutate: markAttendance, isPending } = useMarkAttendance();
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [notes, setNotes] = useState<Record<string, string>>({});
+  
+  console.log('useTeacherClasses data:', { data, isLoading, error, isError });
 
   const selectedClass = data?.classes.find(cls => cls._id === selectedClassId);
 
@@ -77,11 +80,14 @@ const AttendanceMarking: React.FC = () => {
           className="mt-2 sm:mt-0 rounded-md border p-2"
         >
           <option value="">Select a class</option>
-          {classes.map((cls) => (
-            <option key={cls._id} value={cls._id}>
-              {cls.name} - {format(new Date(cls.schedule.date), 'PPP')}
-            </option>
-          ))}
+          {classes.map((cls) => {
+            const dateStr = cls.schedule?.date ? format(new Date(cls.schedule.date), 'PPP') : 'No schedule';
+            return (
+              <option key={cls._id} value={cls._id}>
+                {cls.name} - {dateStr}
+              </option>
+            );
+          })}
         </select>
       </div>
 
