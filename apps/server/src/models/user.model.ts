@@ -13,6 +13,7 @@ export interface IUser extends Document {
   phoneNumber?: string;
   address?: string;
   dateOfBirth?: Date;
+  pushTokens: string[];
   createdAt: Date;
   updatedAt: Date;
   __v?: number;
@@ -66,9 +67,10 @@ const userSchema = new Schema<IUser>({
   dateOfBirth: {
     type: Date
   },
-  availability: { 
-    type: [String], 
-    default: [] 
+  pushTokens: [{ type: String }],
+  availability: {
+    type: [String],
+    default: []
   },
 }, { 
   timestamps: true,

@@ -1,7 +1,8 @@
 import { Schema, model, Document } from 'mongoose';
 
 export interface IGalleryImage extends Document {
-  imageUrl: string;
+  secure_url: string;
+  public_id: string;
   caption?: string;
   event?: Schema.Types.ObjectId;
   class?: Schema.Types.ObjectId;
@@ -10,7 +11,8 @@ export interface IGalleryImage extends Document {
 }
 
 const galleryImageSchema = new Schema<IGalleryImage>({
-  imageUrl: { type: String, required: true },
+  secure_url: { type: String, required: true },
+  public_id: { type: String, required: true },
   caption: { type: String },
   event: { type: Schema.Types.ObjectId, ref: 'Event' },
   class: { type: Schema.Types.ObjectId, ref: 'Class' },

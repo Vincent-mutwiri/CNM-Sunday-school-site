@@ -18,7 +18,10 @@ import resourceRoutes from './routes/resourceRoutes';
 import eventRoutes from './routes/eventRoutes';
 import galleryRoutes from './routes/galleryRoutes';
 import settingsRoutes from './routes/settingsRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
+import reportRoutes from './routes/reportRoutes';
 import { errorHandler } from './utils/errors';
+import { startAnnouncementJob } from './jobs/announcementJob';
 
 // Load environment variables
 dotenv.config();
@@ -74,6 +77,8 @@ app.use('/api/resources', resourceRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/gallery', galleryRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -129,6 +134,7 @@ const startServer = async () => {
 📚 API Documentation: http://localhost:${PORT}/api-docs
 ================================================
 `);
+      startAnnouncementJob();
     });
 
     // Handle unhandled promise rejections

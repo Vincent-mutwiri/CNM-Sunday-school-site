@@ -458,3 +458,23 @@ export const updateMyAvailability = async (req: AuthRequest, res: Response, next
     next(error);
   }
 };
+
+export const registerPushToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      throw new BadRequestError('Token is required');
+    }
+    const user = await User.findByIdAndUpdate(
+      req.user?._id,
+      { $addToSet: { pushTokens: token } },
+      { new: true }
+    );
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+};
